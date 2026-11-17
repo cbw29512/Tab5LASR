@@ -4,7 +4,7 @@ bool tab5_power_pack_present_mv(uint32_t millivolts) {
     // Tab5 uses a removable 2S NP-F550 pack.
     // Empirical Tab5 absence reading is ~2V, while a protected pack is
     // normally >4V. Reject wild values rather than charging into no pack.
-    return millivolts >= 4000 && millivolts <= 8800;
+    return millivolts >= 5500 && millivolts <= 8450;
 }
 uint32_t tab5_power_decode_ina226_mv(uint8_t msb, uint8_t lsb) {
     const uint32_t raw = ((uint32_t)msb << 8) | lsb;
