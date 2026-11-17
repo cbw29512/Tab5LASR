@@ -2,6 +2,7 @@
 #include "camera_state.h"
 #include "tab5_board_power.h"
 #include "tab5_power.h"
+#include "tab5_battery_monitor.h"
 #include "esp_log.h"
 
 static const char *TAG = "tab5lasr";
@@ -20,6 +21,9 @@ void app_main(void) {
     if (!tab5_power_init()) {
         // Never bypass charger safety to make a camera demo work.
         ESP_LOGW(TAG, "Battery charging not enabled; check battery status");
+    }
+    if (!tab5_battery_monitor_start()) {
+        ESP_LOGW(TAG, "Battery telemetry unavailable; do not certify battery portability");
     }
     if (!camera_uvc_start(panel)) {
         ESP_LOGE(TAG, "Camera USB host initialization failed");
