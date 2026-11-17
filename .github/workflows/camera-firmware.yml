@@ -20,6 +20,13 @@ jobs:
             -lm -o /tmp/camera_fps_test
           /tmp/camera_fps_test
 
+      - name: Camera battery startup and INA226 host C tests
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
+            firmware/main/tab5_power_policy.c firmware/tests/test_camera_battery_policy.c \
+            -o /tmp/tab5lasr_battery_test
+          /tmp/tab5lasr_battery_test
       - name: Read-only factory partition parser unit tests
         run: python -m unittest discover -s firmware/tests -p 'test_partition_gate.py' -v
 
