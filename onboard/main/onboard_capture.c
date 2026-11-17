@@ -4,6 +4,7 @@
 #include "onboard_view.h"
 #include "onboard_capture_buffers.h"
 #include "bsp/esp-bsp.h"
+#include "esp_video_device.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <fcntl.h>
