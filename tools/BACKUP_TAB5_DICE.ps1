@@ -7,6 +7,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 try {
+    # Fail before reading 32 MiB if the remote private repository isn't ready.
+    if (-not [string]::IsNullOrWhiteSpace($PrivateRepo)) {
+        $repoInfo = & gh repo view $PrivateRepo --json visibility | ConvertFrom-Json
+        if ($LASTEXITCODE -ne 0 -or !$repoInfo -or $repoInfo.visibility -ne 'PRIVATE') {
+            throw "Private backup repository missing/inaccessible: $PrivateRepo"
+        }
+    }
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $folder = Join-Path $Root $timestamp
     New-Item -ItemType Directory -Force -Path $folder | Out-Null
@@ -53,10 +60,6 @@ try {
     if ([string]::IsNullOrWhiteSpace($PrivateRepo)) {
         Write-Warning 'Only a LOCAL backup exists. Supply -PrivateRepo OWNER/PRIVATE_REPO to archive and verify permanently.'
         return
-    }
-    $repoInfo = & gh repo view $PrivateRepo --json visibility | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0 -or !$repoInfo -or $repoInfo.visibility -ne 'PRIVATE') {
-        throw "Refusing upload: $PrivateRepo must be an existing PRIVATE GitHub repository."
     }
     $tag = "tab5-dice-readback-$timestamp"
     & gh release create $tag $verified $manifest --repo $PrivateRepo --title "Verified Tab5 dice roller flash $timestamp" --notes "Full 16 MiB physical-device readback. SHA-256 in manifest. Restore is manual; never flash this automatically."
