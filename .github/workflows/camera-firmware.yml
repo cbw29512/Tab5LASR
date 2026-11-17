@@ -1,0 +1,61 @@
+name: Tab5 Camera-Only Firmware
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/camera-firmware.yml'
+  workflow_dispatch:
+
+jobs:
+  camera-metrics:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host C camera FPS tests
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
+            firmware/main/camera_metrics.c firmware/tests/test_camera_metrics.c \
+            -lm -o /tmp/camera_fps_test
+          /tmp/camera_fps_test
+
+  camera-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build camera app for ESP32-P4 v1.x with IDF 6.1
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: firmware
+      - name: Verify image revision and size against existing 1 MiB factory slot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check esptool==5.6.0
+          test -f firmware/build/tab5lasr_camera.bin
+          python -m esptool --chip esp32p4 image-info firmware/build/tab5lasr_camera.bin > /tmp/camera-image-info.txt
+          cat /tmp/camera-image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/camera-image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/camera-image-info.txt
+          APP_BYTES=$(stat -c%s firmware/build/tab5lasr_camera.bin)
+          echo "Application image bytes: $APP_BYTES"
+          test "$APP_BYTES" -lt 1048576 || { echo 'APP TOO LARGE for existing 1MiB factory slot'; exit 1; }
+      - name: Package application-only test image (never bootloader or partition table)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p flash-review
+          cp firmware/build/tab5lasr_camera.bin flash-review/
+          cd flash-review
+          sha256sum tab5lasr_camera.bin > SHA256SUMS.txt
+          printf 'APPLICATION_ONLY=0x10000\nFULL_FLASH_BACKUP_REQUIRED=true\n' > FLASH_POLICY.txt
+      - name: Upload disposable review build (NOT a recovery backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tab5lasr-camera-review-${{ github.sha }}
+          path: flash-review
+          if-no-files-found: error
+          retention-days: 14
