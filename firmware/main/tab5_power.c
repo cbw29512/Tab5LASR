@@ -89,7 +89,7 @@ bool tab5_power_init(void) {
     ESP_LOGI(TAG, "INA226 battery bus: %lu mV", (unsigned long)mv);
     if (!tab5_power_pack_present_mv(mv)) {
         ESP_LOGW(TAG, "Battery voltage not independently verified; charger OFF. "
-                 "If a pack is fitted, use the on-screen supervised recovery.");
+                 "Camera test has no supervised battery recovery UI; use USB-C only until safely inspected.");
         return false;
     }
     return tab5_power_command_set(true);
