@@ -1,6 +1,6 @@
 idf_component_register(
   SRCS
-    "main.c" "onboard_capture.c" "onboard_view.c" "onboard_ppa.c" "onboard_stats.c"
+    "main.c" "onboard_capture.c" "onboard_capture_buffers.c" "onboard_view.c" "onboard_ppa.c" "onboard_stats.c"
     "tab5_board_power.c" "tab5_power.c" "tab5_power_policy.c"
     "tab5_power_diag.c" "tab5_battery_monitor.c"
     "tab5_recovery_policy.c" "tab5_power_recovery.c" "tab5_power_widget.c"
