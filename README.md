@@ -6,7 +6,7 @@ Portable, offline-first **laser dry-fire target simulator** using an M5Stack Tab
 
 ## Development order — locked
 
-1. **M1: USB camera on Tab5.** Enumerate a UVC webcam, negotiate MJPEG, show live frames on the Tab5 display, measure captured and displayed FPS, log USB failures and handle unplug/replug.
+1. **M1: Built-in MIPI-CSI camera on Tab5.** Initialize the onboard camera via the verified Espressif BSP, negotiate its native V4L2 format, show the live feed on the Tab5, and measure capture/display FPS. Test USB-UVC only as a fallback.
 2. **M2: Web camera viewer.** Host a local browser page and MJPEG stream from the Tab5 so a PC or phone on the same Wi-Fi can view exactly the camera connected to the Tab5.
 3. **M3: SIRT detection and targets.** Detect shot-laser rising edges and register paper target zones; only then add hit/miss scoring.
 
