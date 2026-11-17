@@ -1,0 +1,66 @@
+name: Tab5 Onboard CSI Camera Firmware
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'onboard/**'
+      - '.github/workflows/onboard-firmware.yml'
+  workflow_dispatch:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify onboard camera FPS math and charger guard
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -g \
+            onboard/main/onboard_stats.c onboard/tests/test_onboard_stats.c \
+            -o /tmp/onboard_stats_test
+          /tmp/onboard_stats_test
+          gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -g \
+            onboard/main/tab5_power_policy.c firmware/tests/test_camera_battery_policy.c \
+            -o /tmp/onboard_battery_test
+          /tmp/onboard_battery_test
+          python -m unittest discover -s firmware/tests -p 'test_partition_gate.py' -v
+
+  firmware-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build onboard CSI ESP32-P4 firmware with ESP-IDF 6.1
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+      - name: Reject incompatible ESP32-P4 image or oversized app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install esptool==5.6.0
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/img.txt
+          cat /tmp/img.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/img.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/img.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "ONBOARD_CAMERA_IMAGE_BYTES=$SIZE"
+          test "$SIZE" -le 1048576 || { echo 'STOP: 1 MiB factory app too small'; exit 1; }
+      - name: Assemble app-only review image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p onboard-review
+          cp onboard/build/tab5lasr_onboard.bin onboard-review/
+          cd onboard-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'APP_ONLY=0x10000\nBUILT_IN_CSI=true\nDICE_BACKUP_REQUIRED=true\n' > FLASH_POLICY.txt
+      - name: Publish review artifact, not backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: tab5lasr-onboard-${{ github.sha }}
+          path: onboard-review/
+          if-no-files-found: error
+          retention-days: 14
