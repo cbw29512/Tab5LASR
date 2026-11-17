@@ -4,6 +4,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "freertos/task.h"
 #include "usb/usb_host.h"
