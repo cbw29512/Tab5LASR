@@ -40,6 +40,8 @@ bool onboard_view_init(uint32_t width, uint32_t height, uint32_t pixel_format) {
     }
     g_canvas = lv_canvas_create(lv_scr_act());
     if (g_canvas) {
+        // Keep the guarded battery recovery controls above the video canvas.
+        lv_obj_move_background(g_canvas);
         lv_canvas_set_buffer(g_canvas, g_canvas_pixels[0],
                              g_width, g_height, LV_COLOR_FORMAT_RGB565);
         lv_obj_center(g_canvas);
