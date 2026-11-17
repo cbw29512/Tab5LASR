@@ -72,6 +72,8 @@ try {
     $remoteHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $remote).Hash.ToUpperInvariant()
     if ($remoteHash -cne $hash) { throw 'Downloaded backup SHA-256 mismatch' }
 
+    $verifiedMarker = Join-Path $folder 'PRIVATE_RELEASE_VERIFIED.txt'
+    "PrivateRepo=$PrivateRepo`nReleaseTag=$tag`nSHA256=$hash`nVerifiedAt=$((Get-Date).ToString('o'))" | Set-Content -LiteralPath $verifiedMarker -Encoding UTF8
     Write-Host "PERMANENT PRIVATE RELEASE VERIFIED: $PrivateRepo / $tag" -ForegroundColor Green
     Write-Host 'SAFE GATE PASSED: exact installed flash backup retained locally and in private GitHub.' -ForegroundColor Green
 }
