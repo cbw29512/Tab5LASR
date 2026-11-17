@@ -20,6 +20,9 @@ jobs:
             -lm -o /tmp/camera_fps_test
           /tmp/camera_fps_test
 
+      - name: Read-only factory partition parser unit tests
+        run: python -m unittest discover -s firmware/tests -p 'test_partition_gate.py' -v
+
   camera-firmware:
     runs-on: ubuntu-latest
     steps:
