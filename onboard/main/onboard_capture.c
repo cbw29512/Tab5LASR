@@ -2,65 +2,18 @@
 #include "onboard_state.h"
 #include "onboard_stats.h"
 #include "onboard_view.h"
+#include "onboard_capture_buffers.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include <fcntl.h>
 #include <linux/videodev2.h>
 #include <sys/ioctl.h>
-#include <sys/mman.h>
 #include <unistd.h>
-#include <string.h>
 
-#define BUF_COUNT 2
 static const char *TAG = "lasr_csi";
 onboard_camera_status_t g_onboard_status = {.state = ONBOARD_BOOT};
 
-typedef struct { void *data; size_t size; } capture_buf_t;
-
-static bool init_buffers(int fd, capture_buf_t *buffers) {
-    struct v4l2_requestbuffers req = {
-        .count = BUF_COUNT, .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-        .memory = V4L2_MEMORY_MMAP
-    };
-    if (ioctl(fd, VIDIOC_REQBUFS, &req) < 0 || req.count < BUF_COUNT) {
-        ESP_LOGE(TAG, "V4L2 camera did not allocate two capture buffers");
-        return false;
-    }
-    for (uint32_t i = 0; i < BUF_COUNT; i++) {
-        struct v4l2_buffer buf = {
-            .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
-            .memory = V4L2_MEMORY_MMAP, .index = i
-        };
-        if (ioctl(fd, VIDIOC_QUERYBUF, &buf) < 0) {
-            ESP_LOGE(TAG, "VIDIOC_QUERYBUF index=%lu failed", (unsigned long)i);
-            return false;
-        }
-        buffers[i].size = buf.length;
-        buffers[i].data = mmap(NULL, buf.length, PROT_READ | PROT_WRITE,
-                               MAP_SHARED, fd, buf.m.offset);
-        if (buffers[i].data == MAP_FAILED || !buffers[i].data) {
-            ESP_LOGE(TAG, "mmap camera buffer index=%lu failed", (unsigned long)i);
-            buffers[i].data = NULL;
-            return false;
-        }
-        if (ioctl(fd, VIDIOC_QBUF, &buf) < 0) {
-            ESP_LOGE(TAG, "VIDIOC_QBUF index=%lu failed", (unsigned long)i);
-            return false;
-        }
-    }
-    return true;
-}
-
-static void release_buffers(capture_buf_t *buffers) {
-    for (int i = 0; i < BUF_COUNT; i++) {
-        if (buffers[i].data && buffers[i].data != MAP_FAILED) {
-            if (munmap(buffers[i].data, buffers[i].size) != 0)
-                ESP_LOGW(TAG, "munmap capture buffer failed");
-            buffers[i].data = NULL;
-        }
-    }
-}
 
 static bool capture_frames(int fd, capture_buf_t *buffers) {
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -81,13 +34,13 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
             ESP_LOGE(TAG, "VIDIOC_DQBUF failed; stopped capture");
             break;
         }
-        if (frame.index >= BUF_COUNT || frame.bytesused > buffers[frame.index].size) {
+        if (frame.index >= ONBOARD_BUF_COUNT || frame.bytesused > buffers[frame.index].size) {
             ESP_LOGE(TAG, "Invalid capture buffer index or length");
             break;
         }
         g_onboard_status.captured_frames++;
         g_onboard_status.last_frame_monotonic_us = esp_timer_get_time();
-        if (onboard_view_show(buffers[frame.index].data, frame.bytesused,
+        if (onboard_view_show(buffers[frame.index].data, buffers[frame.index].size,
                               (uint8_t)frame.index)) {
             g_onboard_status.displayed_frames++;
         } else {
@@ -143,13 +96,13 @@ bool onboard_camera_run(void) {
              (unsigned long)g_onboard_status.width,
              (unsigned long)g_onboard_status.height,
              (unsigned long)g_onboard_status.pixel_format);
-    capture_buf_t buffers[BUF_COUNT] = {0};
+    capture_buf_t buffers[ONBOARD_BUF_COUNT] = {0};
     bool ok = onboard_view_init(g_onboard_status.width,
                                g_onboard_status.height,
                                g_onboard_status.pixel_format);
-    if (ok) ok = init_buffers(fd, buffers);
+    if (ok) ok = onboard_init_buffers(fd, buffers);
     if (ok) ok = capture_frames(fd, buffers);
-    release_buffers(buffers);
+    onboard_release_buffers(buffers);
     if (close(fd) != 0) ESP_LOGW(TAG, "Camera close failed");
     g_onboard_status.state = ONBOARD_ERROR;
     return ok;
