@@ -1,0 +1,24 @@
+name: Tab5 Read-Only Flash Layout Tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/inspect_flash_layout.py'
+      - 'firmware/tests/test_inspect_flash_layout.py'
+      - '.github/workflows/flash-layout-tests.yml'
+  workflow_dispatch:
+jobs:
+  layout-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check metadata-only flash parser tests
+        run: |
+          set -euo pipefail
+          python -m unittest discover -s firmware/tests -p 'test_inspect_flash_layout.py' -v
+          python tools/inspect_flash_layout.py --help
+      - name: Ensure no flash mutation commands in parser
+        run: |
+          if grep -E 'write.flash|erase.flash|subprocess|os.system' tools/inspect_flash_layout.py; then
+            echo 'Inspector contains a write/process command'; exit 1
+          fi
