@@ -6,6 +6,7 @@
 #include "onboard_color_ui.h"
 #include "lasr_sd_service.h"
 #include "lasr_sd_widget.h"
+#include "lasr_usb_serial.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -47,6 +48,9 @@ void app_main(void) {
     }
 #endif
     bsp_display_unlock();
+#if CONFIG_LASR_USB_SERIAL_EXPORT
+    if (!lasr_usb_serial_start()) ESP_LOGE(TAG,"USB file downloader unavailable");
+#endif
     ESP_LOGI(TAG,"Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG,"Built-in camera failed; see CSI sensor/format errors");

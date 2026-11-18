@@ -6,6 +6,7 @@ idf_component_register(
     "tab5_recovery_policy.c" "tab5_power_recovery.c" "tab5_power_widget.c"
     "lasr_session_io.c" "lasr_session_metadata.c" "lasr_session_store.c"
     "lasr_session_finish.c" "lasr_sd_service.c" "lasr_sd_widget.c"
+    "lasr_usb_wire.c" "lasr_usb_serial.c"
   INCLUDE_DIRS "."
   REQUIRES esp_driver_ppa
 )

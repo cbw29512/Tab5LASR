@@ -17,6 +17,8 @@ CONFIG_LV_FONT_MONTSERRAT_20=y
 # CONFIG_BSP_SD_FORMAT_ON_MOUNT_FAIL is not set
 CONFIG_LASR_SD_RECORDER=y
 CONFIG_FATFS_LFN_HEAP=y
+# CI-only build exercises USB COM exporter; requires explicit physical validation before flashing.
+CONFIG_LASR_USB_SERIAL_EXPORT=y
 
 # CI-tested LVGL reduced-widget configuration: retain CAMERA CANVAS,
 # BUTTON, LABEL, IMAGE, THEME and all guarded battery UI primitives.

@@ -12,3 +12,6 @@ CC=${CC:-gcc}
   "$ROOT/onboard/tests/test_lasr_session_store.c" \
   -lm -o /tmp/lasr_session_tests
 ASAN_OPTIONS=detect_leaks=1 /tmp/lasr_session_tests
+
+"$CC" -D_GNU_SOURCE -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -g -I"$ROOT/onboard/main" "$ROOT/onboard/main/lasr_usb_wire.c" "$ROOT/onboard/main/lasr_session_io.c" "$ROOT/onboard/main/lasr_session_metadata.c" "$ROOT/onboard/main/lasr_session_store.c" "$ROOT/onboard/main/lasr_session_finish.c" "$ROOT/onboard/tests/test_lasr_usb_wire.c" -lm -o /tmp/lasr_usb_wire_test
+/tmp/lasr_usb_wire_test
