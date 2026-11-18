@@ -28,7 +28,7 @@ Paper target + SIRT laser
                          live feed + FPS
 ```
 
-The browser **does not** use its own camera. No cloud, no external relay, no login, no account or remote internet access; home-LAN only. Avoid exposing HTTP camera feed to the public Internet.
+The browser **does not** use its own camera. In the first standalone experiment, Tab5 creates its own password-protected Wi-Fi hotspot so it can operate without a router (IP `192.168.4.1` only after successful C6 bring-up). No cloud, no external relay, no login, no account or remote internet access; home-LAN only. Avoid exposing HTTP camera feed to the public Internet.
 
 ### Important constraints, not assumptions
 
@@ -74,10 +74,10 @@ Network state: OFF -> C6_POWERED -> HOSTED_UP -> WIFI_CONNECTING -> LAN_READY | 
 ## HTTP contract (target routes, not currently running)
 
 - `GET /`: responsive LAN dashboard from the same origin as live feed.
-- `GET /api/status`: JSON matching `ViewerStatus` and header `Cache-Control: no-store`.
-- `GET /stream`: `multipart/x-mixed-replace; boundary=frame` where each part is `image/jpeg`. One client maximum in first cut.
+- `GET :80/api/status`: JSON matching `ViewerStatus` and header `Cache-Control: no-store`.
+- `GET :81/stream`: `multipart/x-mixed-replace; boundary=frame` where each part is `image/jpeg`. Uses a dedicated server task, same device hostname on port 81; one client maximum.
 - `GET /snapshot.jpg` (optional): latest full JPEG for connection diagnostics.
-- HTTP dashboard is accessible only after Wi-Fi association and routing. No hardcoded fake URL/IP in the webpage.
+- HTTP dashboard is accessible only after Wi-Fi association and routing. The ESP32-C6 WPA2 hotspot uses a 12-character secret generated once and saved to NVS; it is never committed to GitHub or sent to the cloud. Host firmware compatibility is unverified. No hardcoded fake URL/IP in the webpage.
 
 ## Test acceptance
 

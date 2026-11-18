@@ -1,0 +1,9 @@
+menu "LASR Web Camera (experimental)"
+  config LASR_WEB_ENABLED
+    bool "Enable ESP32-C6 Wi-Fi hotspot and camera MJPEG server"
+    default n
+    help
+      Experimental only. Requires a compatible ESP-Hosted slave image
+      on the Tab5 ESP32-C6 and an independently verified flash layout.
+      Do not flash if application size exceeds installed partition.
+endmenu

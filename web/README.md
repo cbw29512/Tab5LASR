@@ -16,7 +16,7 @@ The Tab5 lens and screen are on the same face. Mount the Tab5 with its lens faci
 
 ## API to be served by onboard P4 firmware
 
-`GET /api/status` JSON; `GET /stream` continuous JPEG multipart. All paths **same origin**; no hardcoded remote address, secrets, public hosting or phone-camera permission. See `docs/WEB_VIEWER_CONTRACT.md`.
+`GET /api/status` JSON; `GET /stream` continuous JPEG multipart. The control API uses the page's origin (:80); MJPEG uses the **same Tab5 host on port 81** because streaming occupies a dedicated HTTP server task. No hardcoded remote address, secrets, public hosting or phone-camera permission. See `docs/WEB_VIEWER_CONTRACT.md`.
 
 ## Physical firmware constraints
 

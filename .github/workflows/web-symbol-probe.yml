@@ -1,0 +1,26 @@
+name: Tab5 Symbol Size Probe (not flashable)
+on:
+  push:
+    branches: ['feat/lasr-onboard-web-20261117']
+    paths:
+      - 'tools/print_stdio_symbols.sh'
+      - '.github/workflows/web-symbol-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect-objects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable Wi-Fi and review partition only
+        run: |
+          cat onboard/sdkconfig.web_probe >> onboard/sdkconfig.defaults
+          cat onboard/sdkconfig.partition_2m_probe >> onboard/sdkconfig.defaults
+      - name: Build and examine exact linker object sizes
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+          command: "idf.py build && bash ../tools/print_stdio_symbols.sh"

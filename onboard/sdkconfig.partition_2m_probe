@@ -1,0 +1,4 @@
+# CI candidate only. Not a partition migration authorization.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_web_2m.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions_web_2m.csv"

@@ -1,4 +1,7 @@
 #include "onboard_view.h"
+#if CONFIG_LASR_WEB_ENABLED
+#include "lasr_web_frame.h"
+#endif
 #include "onboard_ppa.h"
 #include "onboard_color.h"
 #include "onboard_color_ui.h"
@@ -19,6 +22,12 @@ bool onboard_view_init(uint32_t width, uint32_t height, uint32_t pixel_format) {
         ESP_LOGE(TAG, "CSI format conversion setup failed");
         return false;
     }
+#if CONFIG_LASR_WEB_ENABLED
+    // Optional: keep local preview active if JPEG networking is unavailable.
+    if (!lasr_web_frame_init(g_width, g_height)) {
+        ESP_LOGE(TAG, "LAN JPEG producer unavailable; camera preview will continue");
+    }
+#endif
     size_t alignment = 0;
     esp_err_t err = esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &alignment);
     if (err != ESP_OK || alignment == 0) {
@@ -69,6 +78,14 @@ bool onboard_view_show(const void *frame_bytes, size_t length,
     }
     bool ok = onboard_ppa_convert(frame_bytes,
                       g_canvas_pixels[buffer_index], g_capacity);
+#if CONFIG_LASR_WEB_ENABLED
+    if (ok) {
+        // Copy BEFORE the display-only color diagnostic so laser measurement
+        // and web encoding are independent of the Tab5 color-mode button.
+        lasr_web_frame_offer((const uint16_t *)g_canvas_pixels[buffer_index],
+                             g_width, g_height);
+    }
+#endif
     if (ok) {
         // Only the displayed RGB565 pixels are modified after PPA output.
         // The V4L2 camera buffer, PPA rotation, battery and charging state

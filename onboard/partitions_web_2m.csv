@@ -1,0 +1,7 @@
+# REVIEW ONLY: firmware candidate for original Tab5 16 MiB flash.
+# Must NOT be flashed until original and current-region readbacks prove
+# 0x110000..0x210000 erased and full current device backup is archived.
+# Name, Type, SubType, Offset, Size, Flags
+nvs,data,nvs,0x9000,0x6000,
+phy_init,data,phy,0xF000,0x1000,
+factory,app,factory,0x10000,0x200000,

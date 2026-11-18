@@ -1,4 +1,7 @@
 #include "onboard_camera.h"
+#if CONFIG_LASR_WEB_ENABLED
+#include "lasr_web_wifi.h"
+#endif
 #include "tab5_board_power.h"
 #include "tab5_power.h"
 #include "tab5_battery_monitor.h"
@@ -43,6 +46,13 @@ void app_main(void) {
     }
     bsp_display_unlock();
 
+#if CONFIG_LASR_WEB_ENABLED
+    // Network initialization runs separately; CSI and battery remain usable
+    // even if the factory C6 firmware does not match this ESP-Hosted host.
+    if (!lasr_web_wifi_start()) {
+        ESP_LOGE(TAG, "LAN viewer disabled; local camera still available");
+    }
+#endif
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG, "Built-in camera failed; see CSI sensor/format errors");
