@@ -4,19 +4,25 @@ on:
     paths:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_sd_*'
+      - 'onboard/main/lasr_usb_*'
       - 'onboard/main/Kconfig.projbuild'
       - 'onboard/main/main.c'
       - 'onboard/main/CMakeLists.txt'
       - 'onboard/sdkconfig.defaults'
       - 'onboard/tests/test_lasr_session_store.c'
+      - 'onboard/tests/test_lasr_usb_wire.c'
+      - 'tools/tests/test_lasr_usb_protocol.py'
       - 'tools/test_lasr_store_host.sh'
       - '.github/workflows/lasr-sd-session.yml'
   pull_request:
     paths:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_sd_*'
+      - 'onboard/main/lasr_usb_*'
       - 'onboard/main/Kconfig.projbuild'
       - 'onboard/tests/test_lasr_session_store.c'
+      - 'onboard/tests/test_lasr_usb_wire.c'
+      - 'tools/tests/test_lasr_usb_protocol.py'
       - '.github/workflows/lasr-sd-session.yml'
   workflow_dispatch:
 
@@ -26,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash tools/test_lasr_store_host.sh
+      - run: python -m unittest discover -s tools/tests -v
       - name: Limit new module sizes
         run: |
           set -euo pipefail

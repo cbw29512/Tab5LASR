@@ -7,4 +7,12 @@ menu "LASR prototype session recorder"
             Laser detection is NOT connected. A user-triggered write/read/delete
             probe tests storage without simulating shot events or recording video.
             Do not flash until the app partition and hardware gates have passed.
+    config LASR_USB_SERIAL_EXPORT
+        bool "Read-only session export over existing USB Serial/JTAG console"
+        depends on LASR_SD_RECORDER && ESP_CONSOLE_USB_SERIAL_JTAG
+        default n
+        help
+            Allows LASR1 LIST/GET commands for completed sessions only.
+            This is a serial downloader, not USB Mass Storage. Requires
+            Windows pyserial client and actual hardware testing.
 endmenu

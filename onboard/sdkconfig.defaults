@@ -16,3 +16,6 @@ CONFIG_LV_FONT_MONTSERRAT_20=y
 # Never wipe a user's SD card when mounting fails.
 # CONFIG_BSP_SD_FORMAT_ON_MOUNT_FAIL is not set
 CONFIG_LASR_SD_RECORDER=y
+CONFIG_FATFS_LFN_HEAP=y
+# USB COM downloader is only enabled for a separately accepted hardware image.
+# CONFIG_LASR_USB_SERIAL_EXPORT is not set
