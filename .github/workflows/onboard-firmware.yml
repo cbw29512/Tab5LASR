@@ -20,6 +20,10 @@ jobs:
             -o /tmp/onboard_stats_test
           /tmp/onboard_stats_test
           gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -g \
+            onboard/main/onboard_color.c onboard/tests/test_onboard_color.c \
+            -o /tmp/onboard_color_test
+          /tmp/onboard_color_test
+          gcc -std=c11 -Wall -Wextra -Werror -fsanitize=undefined -g \
             onboard/main/tab5_power_policy.c firmware/tests/test_camera_battery_policy.c \
             -o /tmp/onboard_battery_test
           /tmp/onboard_battery_test
