@@ -1,10 +1,12 @@
-# LASR web camera: browser is the primary display
+# LASR web viewer: OPTIONAL companion to portable offline Tab5
+
+**Product priority changed:** See [PORTABLE_STANDALONE_CONTRACT.md](PORTABLE_STANDALONE_CONTRACT.md). The Tab5 MUST work independently on its own battery, screen and onboard camera with no phone, computer, router or web viewer. The web viewer is a secondary convenience; it is not permitted to block offline scoring or session recording.
 
 ## Definition of Done (M2)
 
-The Tab5 camera lens is on the **same side as its screen**. In a shooting setup the lens faces a wall/paper target, which also makes the Tab5's screen face the target rather than the shooter. Consequently the shooter controls the system from a browser on a phone, tablet or PC; the Tab5 screen is for local diagnostics and battery recovery.
+The current factory Tab5 camera lens is on the **same side as its screen**, so the existing mounting arrangement cannot show its own screen to a shooter while looking at the wall target. Rear-facing camera relocation or an optical redirect is a required hardware feasibility investigation; the existing browser viewer temporarily helps test the front-camera setup, but **must never be required for the finished portable product**.
 
-**M2 is complete only when a real Tab5 onboard CSI camera feed appears in a LAN browser**, with measured latency/FPS and battery-only operation. An HTML mock, a working build, or a passing HTTP API test alone do not satisfy M2.
+**Optional web milestone**: A real Tab5 onboard CSI feed appears in a browser when Wi-Fi is available, with measured latency/FPS and battery-only operation. No HTML mock, passing build, or HTTP API unit test alone satisfies the milestone. The separate **primary offline product DoD** is defined in `PORTABLE_STANDALONE_CONTRACT.md`.
 
 ### Hardware architecture
 
@@ -28,7 +30,7 @@ Paper target + SIRT laser
                          live feed + FPS
 ```
 
-The browser **does not** use its own camera. In the first standalone experiment, Tab5 creates its own password-protected Wi-Fi hotspot so it can operate without a router (IP `192.168.4.1` only after successful C6 bring-up). No cloud, no external relay, no login, no account or remote internet access; home-LAN only. Avoid exposing HTTP camera feed to the public Internet.
+The browser **does not** use its own camera. An offline session never waits for Wi-Fi or a browser. In the first standalone experiment, Tab5 creates its own password-protected Wi-Fi hotspot so it can operate without a router (IP `192.168.4.1` only after successful C6 bring-up). No cloud, no external relay, no login, no account or remote internet access; home-LAN only. Avoid exposing HTTP camera feed to the public Internet.
 
 ### Important constraints, not assumptions
 
@@ -38,7 +40,7 @@ The browser **does not** use its own camera. In the first standalone experiment,
 - Battery power and charging controls are locked to the previously tested P4/P5/P7 settings and supervised recovery implementation. LAN streaming adds load: verify battery-only + camera + Wi-Fi together.
 - First web version supports **one viewing client** with bounded buffering. No multiple-client, recording or background network telemetry yet.
 - The picture has been upright since the 180-degree fix. Color calibration is ongoing. The HTTP stream must retain the known-good orientation; never confuse display-only color modes with raw detection buffers.
-- The laser appears on the **wall target**, and the camera sees it; the shooter uses the browser to locate the dot even when the Tab5 screen cannot be seen.
+- The laser appears on the **wall target**, and the camera sees it; the optional browser is a diagnostic/spectator viewer. The finished device must have the screen visible to the shooter while the camera views the target.
 
 ## Data schemas and state machines
 
