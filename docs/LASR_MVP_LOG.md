@@ -56,3 +56,13 @@ Local browser interaction tests and syntax checks are recorded in the PR descrip
 - GitHub Actions workflow: [successful run 44264568231](https://github.com/cbw29512/Tab5LASR/actions/runs/44264568231).
 - A second [successful run 44264516169](https://github.com/cbw29512/Tab5LASR/actions/runs/44264516169) also completed.
 - This verifies the automated model/timer workflow, **not** live browser click testing or real Tab5 hardware operation. Browser automation in the current execution environment was blocked at page navigation and remains pending on a normal browser.
+
+## Local microSD session recording requirement (2026-11-18)
+
+- User requested every physical Tab5 shooting session saved **on the device's microSD card**. This is a required standalone feature, not a browser download dependency.
+- Hardware feasibility confirmed through official M5Stack microSD read/write example and Espressif Tab5 BSP SD mount + VFS API.
+- Session v1 will store target/calibration metadata, elapsed and split shot times, normalized impact coordinates, zones, scores and local save status as `session.json`, `target.json` and `shots.csv`, with a crash-recovery journal.
+- **No on-device session writer exists yet.** The browser MVP's `localStorage` and CSV demo export must not be represented as microSD persistence.
+- Power loss, card removal/full/corrupt card, offline running, camera+SD concurrent load and **visible UNSAVED warnings** are mandatory tests.
+- Camera video recording is explicitly *not* part of v1; investigate later after measured performance and storage throughput.
+- Detailed contract: [LASR_MICROSD_SESSION_STORAGE_CONTRACT.md](LASR_MICROSD_SESSION_STORAGE_CONTRACT.md).
