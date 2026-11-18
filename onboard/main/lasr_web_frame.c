@@ -20,6 +20,7 @@ static uint32_t s_w, s_h, s_sequence;
 static size_t s_latest_size;
 static int64_t s_last_encoded_us, s_last_offered_us;
 static bool s_pending;
+static bool s_active;
 
 static void encode_worker(void *unused) {
     (void)unused;
@@ -91,6 +92,7 @@ bool lasr_web_frame_init(uint32_t width, uint32_t height) {
         ESP_LOGE(TAG, "Could not start hardware JPEG encoder worker");
         return false;
     }
+    s_active = true;  // Producers may run only after all allocations and task creation.
     ESP_LOGI(TAG, "Hardware MJPEG image %lux%lu @ <=4 fps; raw camera remains independent",
              (unsigned long)s_w, (unsigned long)s_h);
     return true;
@@ -98,7 +100,7 @@ bool lasr_web_frame_init(uint32_t width, uint32_t height) {
 
 void lasr_web_frame_offer(const uint16_t *pixels, uint32_t width, uint32_t height) {
     const int64_t now = esp_timer_get_time();
-    if (!pixels || !s_lock || width < s_w * 2u || height < s_h * 2u ||
+    if (!pixels || !s_active || !s_lock || width < s_w * 2u || height < s_h * 2u ||
         now - s_last_offered_us < 250000) return;
     if (xSemaphoreTake(s_lock, 0) != pdTRUE) return; // Never stall CSI.
     if (s_pending) { xSemaphoreGive(s_lock); return; }
@@ -116,7 +118,7 @@ void lasr_web_frame_offer(const uint16_t *pixels, uint32_t width, uint32_t heigh
 
 size_t lasr_web_frame_copy(uint8_t *dst, size_t cap,
                            uint32_t *seq, int64_t *age_us) {
-    if (!dst || !s_lock || !cap ||
+    if (!dst || !s_active || !s_lock || !cap ||
         xSemaphoreTake(s_lock, pdMS_TO_TICKS(50)) != pdTRUE) return 0;
     const size_t bytes = s_latest_size <= cap ? s_latest_size : 0;
     if (bytes) memcpy(dst, s_latest, bytes);
