@@ -1,0 +1,51 @@
+name: Tab5 Web LTO Size Probe (not flashable)
+on:
+  push:
+    branches: ['feat/lasr-onboard-web-20261117']
+    paths:
+      - 'onboard/sdkconfig.lto_probe'
+      - '.github/workflows/web-lto-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile-lto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose LTO + slim-display candidate in CI only
+        run: |
+          set -euo pipefail
+          cat onboard/sdkconfig.web_probe >> onboard/sdkconfig.defaults
+          cat onboard/sdkconfig.partition_2m_probe >> onboard/sdkconfig.defaults
+          cat onboard/sdkconfig.lvgl_slim_probe >> onboard/sdkconfig.defaults
+          cat onboard/sdkconfig.lto_probe >> onboard/sdkconfig.defaults
+          grep -Fq CONFIG_COMPILER_LTO_LINKTIME=y onboard/sdkconfig.defaults
+          grep -Fq CONFIG_LV_USE_BUTTON=y onboard/sdkconfig.defaults
+      - name: Build optimized camera Wi-Fi and battery firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+          command: "idf.py build && idf.py size-components > build/lto-components.txt"
+      - name: Report size against CURRENT partition, never flash
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/verify_proposed_partition.py onboard/build/partition_table/partition-table.bin
+          BYTES=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "LTO_WEB_CAMERA_IMAGE_BYTES=$BYTES"
+          echo "CURRENT_DEVICE_APP_CAPACITY=1048576"
+          if [ "$BYTES" -gt 1048576 ]; then
+            echo "::warning::LTO candidate still oversized. NO FLASH."
+          else
+            echo "::notice::Binary size fits; C6 handshake and physical battery+Wi-Fi testing still outstanding. NOT FLASH-APPROVED."
+          fi
+      - name: Archive only size reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lto-size-reports-${{ github.sha }}
+          path: onboard/build/lto-components.txt
+          if-no-files-found: error
+          retention-days: 14
