@@ -1,4 +1,5 @@
 #include "lasr_sd_service.h"
+#include "lasr_session_io.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -29,8 +30,7 @@ static atomic_bool s_drop;
 static bool post(const cmd_t *cmd) {
     if (!cmd || !s_queue) return false;
     if (xQueueSend(s_queue, cmd, 0) != pdTRUE) {
-        // Lost event invalidates the whole session. Never claim SAVED.
-        atomic_store(&s_drop, true);
+            atomic_store(&s_drop, true);
         ESP_LOGE(TAG, "SD queue full: recording marked incomplete");
         return false;
     }
@@ -75,7 +75,7 @@ bool lasr_sd_service_retry(void) {
 }
 
 static bool test_card(void) {
-    // The diagnostic writes outside /LASR/sessions and never invents shot data.
+    if (!lasr_io_mkdir(BSP_SD_MOUNT_POINT "/LASR")) return false;
     const char *path=BSP_SD_MOUNT_POINT "/LASR/.write-test";
     FILE *fp=fopen(path,"wb");
     if(!fp) return false;
