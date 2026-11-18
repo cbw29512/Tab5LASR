@@ -1,4 +1,4 @@
-"""Regression guard: reboot must restore the user's Color 1 baseline.
+"""Regression guard: reboot must restore the user's Color 2 baseline.
 
 The four display-only diagnostic modes remain available, but the provisional
 byte-swap setting must not silently become the power-on default again.
@@ -11,7 +11,7 @@ SOURCE = Path(__file__).resolve().parents[2] / "onboard/main/onboard_color_ui.c"
 
 
 class CameraColorStartupTest(unittest.TestCase):
-    def test_color_one_is_boot_default(self):
+    def test_color_two_is_boot_default(self):
         try:
             content = SOURCE.read_text(encoding="utf-8")
         except OSError as exc:
@@ -22,8 +22,8 @@ class CameraColorStartupTest(unittest.TestCase):
         )
         self.assertIsNotNone(found, "Color mode initializer missing")
         self.assertEqual(
-            found.group(1), "ONBOARD_COLOR_ORIGINAL",
-            "Power cycling must not restore an unverified display correction",
+            found.group(1), "ONBOARD_COLOR_SWAP_RED_BLUE",
+            "Power cycling must restore the user-selected red/blue preview mode",
         )
 
     def test_color_mode_button_still_cycles(self):
