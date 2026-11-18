@@ -48,12 +48,21 @@ void app_main(void) {
     bsp_display_unlock();
 
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
-    // Explicit test build only. Never format the card or overwrite sessions.
-    if (lasr_sd_smoke_once() != ESP_OK)
-        ESP_LOGE(TAG, "Opt-in microSD test failed; camera will still start");
-#endif
+    // One-purpose engineering image: preserve the display and charger
+    // safeguards, then test SD alone to fit the original 1 MiB app partition.
+    // Never claim this variant has camera capture or simultaneous CSI+SD.
+    ESP_LOGW(TAG, "SD-ONLY DIAGNOSTIC: CSI camera deliberately disabled");
+    const esp_err_t sd_result = lasr_sd_smoke_once();
+    if (sd_result != ESP_OK) {
+        ESP_LOGE(TAG, "microSD read/write diagnostic FAILED: %s",
+                 esp_err_to_name(sd_result));
+    } else {
+        ESP_LOGW(TAG, "microSD read/write diagnostic PASSED; camera still disabled");
+    }
+#else
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG, "Built-in camera failed; see CSI sensor/format errors");
     }
+#endif
 }
