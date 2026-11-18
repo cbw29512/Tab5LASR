@@ -12,6 +12,7 @@ CONFIG_ESP_VIDEO_ENABLE_ISP_PIPELINE_CONTROLLER=y
 CONFIG_CAMERA_SC202CS=y
 CONFIG_CAM_CTRL_SPI_ENABLE=n
 CONFIG_LV_CONF_SKIP=y
-
-# Battery recovery UI uses the same large font as the working dice roller.
 CONFIG_LV_FONT_MONTSERRAT_20=y
+# Never wipe a user's SD card when mounting fails.
+# CONFIG_BSP_SD_FORMAT_ON_MOUNT_FAIL is not set
+CONFIG_LASR_SD_RECORDER=y
