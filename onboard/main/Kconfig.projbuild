@@ -1,0 +1,10 @@
+menu "LASR prototype session recorder"
+    config LASR_SD_RECORDER
+        bool "Enable microSD session recorder and explicit SD self-test UI"
+        default y
+        help
+            An experimental SD worker uses the on-board microSD via the Tab5 BSP.
+            Laser detection is NOT connected. A user-triggered write/read/delete
+            probe tests storage without simulating shot events or recording video.
+            Do not flash until the app partition and hardware gates have passed.
+endmenu

@@ -1,0 +1,76 @@
+name: LASR microSD recorder build and host tests
+on:
+  push:
+    paths:
+      - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_sd_*'
+      - 'onboard/main/Kconfig.projbuild'
+      - 'onboard/main/main.c'
+      - 'onboard/main/CMakeLists.txt'
+      - 'onboard/sdkconfig.defaults'
+      - 'onboard/tests/test_lasr_session_store.c'
+      - 'tools/test_lasr_store_host.sh'
+      - '.github/workflows/lasr-sd-session.yml'
+  pull_request:
+    paths:
+      - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_sd_*'
+      - 'onboard/main/Kconfig.projbuild'
+      - 'onboard/tests/test_lasr_session_store.c'
+      - '.github/workflows/lasr-sd-session.yml'
+  workflow_dispatch:
+
+jobs:
+  host-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tools/test_lasr_store_host.sh
+      - name: Limit new module sizes
+        run: |
+          set -euo pipefail
+          for f in onboard/main/lasr_session_*.[ch] onboard/main/lasr_sd_*.[ch]; do
+            n=$(wc -l < "$f")
+            test "$n" -le 150 || { echo "Split $f ($n lines)"; exit 1; }
+          done
+  firmware-size-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app with experimental microSD worker
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+      - name: Reject oversized/nonmatching app image
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install esptool==5.6.0
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image.txt
+          cat /tmp/image.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image.txt
+          test $(stat -c%s onboard/build/tab5lasr_onboard.bin) -le 1048576 || {
+            echo 'BLOCKED: existing 1MiB app partition cannot fit this image'; exit 1;
+          }
+      - name: Package size-gated application for review only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p lasr-review
+          cp onboard/build/tab5lasr_onboard.bin lasr-review/
+          (cd lasr-review && sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt)
+          printf 'REVIEW_ONLY=true\nDO_NOT_FLASH_UNTIL_HARDWARE_ACCEPTANCE=true\nAPP_OFFSET=0x10000\nMAX_APP_BYTES=1048576\n' > lasr-review/REVIEW_POLICY.txt
+      - name: Save CI review artifact, not installation
+        uses: actions/upload-artifact@v4
+        with:
+          name: lasr-review-${{ github.sha }}
+          path: lasr-review/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Physical flash is always manual and separately gated
+        run: |
+          echo "CI archived a reviewed app only; no hardware was modified."
