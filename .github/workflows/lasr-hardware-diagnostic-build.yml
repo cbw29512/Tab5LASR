@@ -108,3 +108,5 @@ jobs:
           & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
           if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
           Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
+          # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
+          $global:LASTEXITCODE = 0
