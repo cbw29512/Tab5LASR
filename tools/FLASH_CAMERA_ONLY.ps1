@@ -2,7 +2,9 @@
 param(
     [ValidatePattern('^COM[0-9]+$')][string]$Port = 'COM5',
     [Parameter(Mandatory=$true)][string]$Firmware,
-    [Parameter(Mandatory=$true)][string]$BackupFolder
+    [Parameter(Mandatory=$true)][string]$BackupFolder,
+    # Explicit confirmation avoids a blank Read-Host in nested PowerShell.
+    [string]$ConfirmFlash = ''
 )
 $ErrorActionPreference = 'Stop'
 try {
@@ -41,8 +43,16 @@ try {
     }
     Write-Host 'Recovery flash and candidate application verified.' -ForegroundColor Green
     Write-Host 'Camera test will REPLACE the installed dice-roller APPLICATION.' -ForegroundColor Yellow
-    $confirm = Read-Host 'Type FLASH CAMERA to install application at 0x10000'
-    if ($confirm -cne 'FLASH CAMERA') { throw 'Cancelled; no flash was written.' }
+    # A deliberate CLI token is accepted only AFTER all safety gates passed.
+    # Leave the token unset for an interactive prompt in the same shell.
+    $confirm = $ConfirmFlash
+    if ([string]::IsNullOrWhiteSpace($confirm)) {
+        $confirm = Read-Host 'Type FLASH CAMERA to install application at 0x10000'
+    }
+    if ($confirm -cne 'FLASH CAMERA') {
+        throw 'Cancelled; no flash was written.'
+    }
+    Write-Host 'Operator confirmed application-only flash at 0x10000.' -ForegroundColor Yellow
     & python -m esptool --chip esp32p4 --port $Port --baud 460800 write-flash 0x10000 $Firmware
     if ($LASTEXITCODE -ne 0) { throw 'Camera application flash failed' }
     Write-Host 'CAMERA APPLICATION FLASH COMPLETED. Physically test USB camera, battery and logs.' -ForegroundColor Green
