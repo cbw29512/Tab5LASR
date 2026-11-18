@@ -1,11 +1,12 @@
 set(lasr_web_sources "")
-set(lasr_web_components "")
+# ESP-IDF collects component dependencies before sdkconfig is fully resolved.
+# These must be UNCONDITIONAL even when optional web sources are gated.
+set(lasr_web_components
+  esp_driver_jpeg esp_http_server esp_wifi esp_netif nvs_flash)
 set(lasr_embedded_files "")
 if(CONFIG_LASR_WEB_ENABLED)
   list(APPEND lasr_web_sources
     "lasr_web_frame.c" "lasr_web_wifi.c" "lasr_web_http.c" "lasr_web_assets.c")
-  list(APPEND lasr_web_components
-    esp_driver_jpeg esp_http_server esp_wifi esp_netif nvs_flash)
   list(APPEND lasr_embedded_files
     "../../web/index.html" "../../web/app.js"
     "../../web/model.js" "../../web/styles.css")
