@@ -54,7 +54,7 @@ def parse_partitions(dump: bytes) -> list[Partition]:
         offset, size = struct.unpack_from("<II", raw, 4)
         flags = struct.unpack_from("<I", raw, 28)[0]
         name = raw[12:28].split(b"\0", 1)[0].decode("ascii", "replace")
-        if not name or not size or offset < APP_OFFSET or offset + size > FLASH_BYTES:
+        if not name or not size or offset < TABLE_BASE + 0x1000 or offset + size > FLASH_BYTES:
             raise ValueError(f"Invalid partition name/range at index {index // ENTRY_BYTES}")
         partitions.append(Partition(name, kind, subtype, offset, size, flags))
     if not partitions:
