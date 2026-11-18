@@ -69,8 +69,12 @@ static esp_err_t status_handler(httpd_req_t *req) {
 }
 
 static esp_err_t stream_handler(httpd_req_t *req) {
-    if (__atomic_exchange_n(&s_stream_clients, 1, __ATOMIC_ACQ_REL))
-        return httpd_resp_send_err(req, HTTPD_503_SERVICE_UNAVAILABLE, "One camera viewer at a time");
+    if (__atomic_exchange_n(&s_stream_clients, 1, __ATOMIC_ACQ_REL)) {
+        // ESP-IDF's httpd_err_code_t does not have a built-in 503 enum.
+        httpd_resp_set_status(req, "503 Service Unavailable");
+        httpd_resp_set_type(req, "text/plain");
+        return httpd_resp_sendstr(req, "One camera viewer at a time");
+    }
     uint8_t *jpeg = heap_caps_malloc(512u * 1024u, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!jpeg) {
         __atomic_store_n(&s_stream_clients, 0, __ATOMIC_RELEASE);
