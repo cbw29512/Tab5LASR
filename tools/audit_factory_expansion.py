@@ -13,7 +13,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from inspect_flash_layout import FLASH_BYTES, parse_partitions
+if __package__:
+    from .inspect_flash_layout import FLASH_BYTES, parse_partitions
+else:
+    from inspect_flash_layout import FLASH_BYTES, parse_partitions
 
 LOG = logging.getLogger("tab5_expansion")
 START = 0x110000
