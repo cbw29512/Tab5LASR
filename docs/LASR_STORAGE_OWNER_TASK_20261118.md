@@ -68,3 +68,13 @@ SD worker on FINISH
 4. Implement independent session readback, then USB-C / Wi-Fi copy using the documented ownership contracts.
 
 References: `docs/LASR_MICROSD_SESSION_STORAGE_CONTRACT.md` and `docs/LASR_SESSION_TRANSFER_CONTRACT.md` on browser MVP PR #7; Espressif ESP32-P4 FreeRTOS and Tab5 BSP 1.3.3 API.
+
+## Raw camera pulse primitive (same review, synthetic tests only)
+
+- `onboard/main/lasr_laser_pulse.{h,c}` introduces a **camera-source-neutral** rising-edge detector. Input must come from an independently calibrated raw CSI bright-blob scanner, which does **not yet exist**.
+- Schema: `lasr_pulse_config_t { on_frames, off_frames, max_gap_us }`; `lasr_pulse_detector_t { phase, dark_count, visible_count, first_visible_us, last_frame_us }`; `lasr_pulse_event_t { shot_detected, first_seen_us, x_norm, y_norm }`.
+- States: `WAIT_DARK -> ARMED -> CANDIDATE -> HELD -> REARMING -> ARMED`. Requires darkness before first shot; counts a persistent laser spot once; re-arms after sufficient off frames. A time reversal or frame gap resets and requires new darkness.
+- Timestamp comes from the *first* qualifying visible frame, not the later debounce decision; cross-event elapsed/split calculation will be supplied by a separate monotonic shot clock.
+- User-facing pulse thresholds, auto target recognition, camera bright-blob thresholds, pulse duration and IR/visible SIRT compatibility are **not asserted**. They require measured frames; source code does not invent working sensor calibration.
+- `onboard/tests/test_lasr_laser_pulse.c` validates synthetic startup-lit rejection, one-shot-per-pulse, flicker rejection, rearm, dropped-frame reset, nonmonotonic timestamps and invalid coordinates.
+- This code, like the writer task, is **compiled but not started** in current firmware.

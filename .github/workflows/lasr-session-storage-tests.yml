@@ -4,6 +4,7 @@ on:
     paths:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_recorder_*'
+      - 'onboard/main/lasr_laser_pulse.*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
@@ -11,6 +12,7 @@ on:
     paths:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_recorder_*'
+      - 'onboard/main/lasr_laser_pulse.*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
@@ -41,3 +43,10 @@ jobs:
             -Ionboard/main onboard/main/lasr_transfer_guard.c \
             onboard/tests/test_lasr_transfer_guard.c -o /tmp/lasr_guard
           /tmp/lasr_guard
+      - name: Camera laser pulse state tests (synthetic, no hardware claims)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -g -fsanitize=undefined \
+            -Ionboard/main onboard/main/lasr_laser_pulse.c \
+            onboard/tests/test_lasr_laser_pulse.c -lm -o /tmp/lasr_pulse
+          /tmp/lasr_pulse
