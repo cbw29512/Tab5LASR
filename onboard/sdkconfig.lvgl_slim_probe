@@ -2,6 +2,9 @@
 # Explicitly disable UNUSED widgets. Preserve LVGL touch, canvas, label,
 # button, themes, current battery two-tap recovery and camera orientation.
 CONFIG_LV_CONF_SKIP=y
+# Disable bundled example sources that depend on disabled slider/widgets.
+CONFIG_LV_BUILD_EXAMPLES=n
+CONFIG_LV_BUILD_DEMOS=n
 CONFIG_LV_USE_DRAW_SW=y
 CONFIG_LV_USE_BUTTON=y
 CONFIG_LV_USE_LABEL=y
