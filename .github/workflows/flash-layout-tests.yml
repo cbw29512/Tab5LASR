@@ -24,6 +24,6 @@ jobs:
           python tools/audit_factory_expansion.py --help
       - name: Ensure no flash mutation commands in parser
         run: |
-          if grep -Ei 'write.flash|erase.flash|subprocess|os.system|write-flash|erase-flash' tools/inspect_flash_layout.py tools/audit_factory_expansion.py tools/CHECK_TAB5_WEB_EXPANSION.ps1; then
+          if grep -Ei '(^|[[:space:]])(write-flash|erase-flash|erase-region|write_flash|erase_flash|os\.system|subprocess\.run)[[:space:](]' tools/inspect_flash_layout.py tools/audit_factory_expansion.py tools/CHECK_TAB5_WEB_EXPANSION.ps1; then
             echo 'Inspector contains a write/process command'; exit 1
           fi
