@@ -4,9 +4,9 @@ idf_component_register(
     "tab5_board_power.c" "tab5_power.c" "tab5_power_policy.c"
     "tab5_power_diag.c" "tab5_battery_monitor.c"
     "tab5_recovery_policy.c" "tab5_power_recovery.c" "tab5_power_widget.c"
-    # Compiled storage primitives, intentionally NOT started from app_main.
-    # No camera, battery, partition, or flash behavior changes in this review.
+    # Compiled but NOT started from app_main; software-only review gate.
     "lasr_session_fs.c" "lasr_session_store.c" "lasr_transfer_guard.c" "lasr_sd_device.c"
+    "lasr_recorder_core.c" "lasr_recorder_task.c"
   INCLUDE_DIRS "."
   REQUIRES esp_driver_ppa fatfs sdmmc
 )

@@ -3,12 +3,14 @@ on:
   push:
     paths:
       - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_recorder_*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
   pull_request:
     paths:
       - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_recorder_*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
@@ -18,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Compile strict portable session writer tests
+      - name: Portable storage and recorder state tests
         run: |
           set -euo pipefail
           gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
@@ -26,7 +28,13 @@ jobs:
             onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
             onboard/tests/test_lasr_session_store.c -lm -o /tmp/lasr_store
           /tmp/lasr_store
-      - name: Compile USB exclusive storage arbitration tests
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/main/lasr_recorder_core.c \
+            onboard/tests/test_lasr_recorder_core.c -lm -o /tmp/lasr_core
+          /tmp/lasr_core
+      - name: USB exclusive media arbitration tests
         run: |
           set -euo pipefail
           gcc -std=c11 -Wall -Wextra -Werror -g -fsanitize=undefined \
