@@ -56,6 +56,21 @@ jobs:
           test $(stat -c%s onboard/build/tab5lasr_onboard.bin) -le 1048576 || {
             echo 'BLOCKED: existing 1MiB app partition cannot fit this image'; exit 1;
           }
-      - name: No automatic firmware publish or flash
+      - name: Package size-gated application for review only
+        shell: bash
         run: |
-          echo "Review build only: no Tab5 was flashed."
+          set -euo pipefail
+          mkdir -p lasr-review
+          cp onboard/build/tab5lasr_onboard.bin lasr-review/
+          (cd lasr-review && sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt)
+          printf 'REVIEW_ONLY=true\nDO_NOT_FLASH_UNTIL_HARDWARE_ACCEPTANCE=true\nAPP_OFFSET=0x10000\nMAX_APP_BYTES=1048576\n' > lasr-review/REVIEW_POLICY.txt
+      - name: Save CI review artifact, not installation
+        uses: actions/upload-artifact@v4
+        with:
+          name: lasr-review-${{ github.sha }}
+          path: lasr-review/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Physical flash is always manual and separately gated
+        run: |
+          echo "CI archived a reviewed app only; no hardware was modified."
