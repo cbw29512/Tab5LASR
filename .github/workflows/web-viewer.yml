@@ -1,0 +1,31 @@
+name: LASR Web Viewer
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/web-viewer.yml'
+  workflow_dispatch:
+jobs:
+  browser-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JS module syntax
+        run: |
+          node --check web/model.js
+          node --check web/app.js
+      - name: Test status schema, stale feed gating, and missing data
+        run: node --test web/tests/*.test.mjs
+      - name: Enforce same-origin-only camera feed and no fake video
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '/stream?reload=' web/app.js
+          grep -Fq 'fetch("/api/status"' web/app.js
+          if grep -Ei '<video|data:video|youtu|cloudflare|example.com' web/index.html; then
+            echo 'Unexpected external media in offline-first viewer'; exit 1
+          fi
