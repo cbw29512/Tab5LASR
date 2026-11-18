@@ -129,4 +129,15 @@ size_t lasr_web_frame_copy(uint8_t *dst, size_t cap,
     return bytes;
 }
 
-uint32_t lasr_web_frame_count(void) { return s_sequence; }
+uint32_t lasr_web_frame_count(void) {
+    return __atomic_load_n(&s_sequence, __ATOMIC_RELAXED);
+}
+
+int64_t lasr_web_frame_age_us(void) {
+    if (!s_active || !s_lock ||
+        xSemaphoreTake(s_lock, pdMS_TO_TICKS(25)) != pdTRUE) return -1;
+    const int64_t age_us = s_last_encoded_us ?
+        esp_timer_get_time() - s_last_encoded_us : -1;
+    xSemaphoreGive(s_lock);
+    return age_us;
+}
