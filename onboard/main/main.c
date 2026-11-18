@@ -3,6 +3,7 @@
 #include "tab5_power.h"
 #include "tab5_battery_monitor.h"
 #include "tab5_power_widget.h"
+#include "onboard_color_ui.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -37,6 +38,9 @@ void app_main(void) {
         return;
     }
     tab5_power_widget_attach(lv_scr_act());
+    if (!onboard_color_ui_attach(lv_scr_act())) {
+        ESP_LOGE(TAG, "Color diagnostic UI unavailable; original camera preview remains valid");
+    }
     bsp_display_unlock();
 
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
