@@ -1,0 +1,56 @@
+name: Experimental Tab5 LAN Camera Probe
+on:
+  push:
+    branches: ['feat/lasr-onboard-web-20261117']
+    paths:
+      - 'onboard/**'
+      - 'web/**'
+      - '.github/workflows/onboard-web-probe.yml'
+  workflow_dispatch:
+jobs:
+  browser-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          node --check web/app.js
+          node --check web/model.js
+          node --test web/tests/*.test.mjs
+  wifi-camera-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enable Wi-Fi probe in CI checkout only, never production
+        run: |
+          cat onboard/sdkconfig.web_probe >> onboard/sdkconfig.defaults
+          grep -Fq 'CONFIG_LASR_WEB_ENABLED=y' onboard/sdkconfig.defaults
+      - name: Compile ESP32-P4 CSI camera with hosted C6 and JPEG HTTP
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+      - name: Enforce original device's 1MiB factory app partition and rev1.x
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install esptool==5.6.0
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > image_info.txt
+          grep -Fq 'Minimal chip revision: v1.0' image_info.txt
+          grep -Fq 'Maximal chip revision: v1.99' image_info.txt
+          BYTES=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "WEB_CAMERA_IMAGE_BYTES=$BYTES"
+          if [ "$BYTES" -gt 1048576 ]; then
+            echo "::error::WEB APP DOES NOT FIT verified 1MiB Tab5 factory partition. DO NOT FLASH."
+            exit 1
+          fi
+      - name: Review-only artifact (never auto-flash)
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-camera-not-flash-approved-${{ github.sha }}
+          path: onboard/build/tab5lasr_onboard.bin
+          retention-days: 14
