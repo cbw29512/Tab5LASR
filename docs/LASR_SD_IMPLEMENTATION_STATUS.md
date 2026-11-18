@@ -44,3 +44,11 @@ During recording, `session.pending` and `shots.pending.csv` preserve recovery ev
 5. Only then connect USB/ Wi-Fi transfer to verified completed sessions.
 
 Reference: https://github.com/cbw29512/Tab5LASR/pull/8
+
+## Size-reduction verification, later 2026-11-18
+
+- ESP-IDF CI run [44274818277](https://github.com/cbw29512/Tab5LASR/actions/runs/44274818277) compiled and linked with Warning/Error logging preserved but Info removed, yielding image `0x100C60` = **1,051,744 bytes**, just **3,168 bytes over** the factory limit. The true partition checker still blocked installation.
+- LTO config flags alone did not reduce the image (observed candidate remained `0x103480`); do not attribute an unmeasured benefit.
+- Documented RISC-V `CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS` is being evaluated separately, with post-build physical camera FPS and stack behavior still mandatory before any install.
+- A separate LVGL unused-widget candidate branch `feat/lasr-sd-size-probe-20261118` is benchmark-only; the stable camera+charger controls stay intact.
+- **No partition migration, flash, recovery-image changes or device writes.**
