@@ -17,7 +17,7 @@
 
 1. Plug the Tab5 into your computer by USB-C (historically COM5) and leave the USB-A webcam unplugged.
 2. Run from PowerShell. The **installer stops** if the local backup hash, factory partition offset/size, candidate application hash, or chip revision does not match.
-3. Type `FLASH CAMERA` **exactly** when explicitly prompted; pressing Enter on a blank prompt cancels without flashing.
+3. **For Windows PowerShell 5.1**, pass `-ConfirmFlash 'FLASH CAMERA'` explicitly to avoid a nested-shell `Read-Host` receiving an empty answer. This is an intentional write authorization; omit the token if you do not intend to flash.
 
 ```powershell
 $ErrorActionPreference = "Stop"
@@ -36,11 +36,13 @@ try {
         --dir $out
     if ($LASTEXITCODE -ne 0) { throw "Onboard camera firmware download failed" }
 
+    # Runs the guarded installer in a subprocess and explicitly authorizes flash.
     & powershell.exe -NoProfile -ExecutionPolicy Bypass `
         -File (Join-Path $project "tools\FLASH_CAMERA_ONLY.ps1") `
         -Port COM5 `
         -Firmware (Join-Path $out "tab5lasr_onboard.bin") `
-        -BackupFolder $backup
+        -BackupFolder $backup `
+        -ConfirmFlash "FLASH CAMERA"
     if ($LASTEXITCODE -ne 0) { throw "Camera application installation stopped" }
 
     Write-Host "ONBOARD CSI CAMERA APP FLASHED" -ForegroundColor Green
