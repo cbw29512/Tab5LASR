@@ -21,6 +21,7 @@ Date: 2026-11-18
 
 - `onboard/main/lasr_session_store.{h,c}`: session state, append, finish, error handling.
 - `onboard/main/lasr_session_fs.{h,c}`: bounded path creation, fsync/close, readback, atomic-ish temporary metadata replacement. FAT rename is **not power-fail atomic**; keep the pending journal.
+- `onboard/main/lasr_sd_device.{h,c}`: explicit no-format SDMMC mount/unmount adapter using the verified Tab5 BSP 1.3.3 API and `BSP_SD_MOUNT_POINT`. Compiled into the firmware but NOT invoked; must be hardware-tested.
 - `onboard/main/lasr_transfer_guard.{h,c}`: exclusive SD owner gate; no USB MSC controller or network service is started by this module.
 - `onboard/tests/test_lasr_session_store.c` and `test_lasr_transfer_guard.c`: cross-platform host tests.
 - `.github/workflows/lasr-session-storage-tests.yml`: host CI tests.

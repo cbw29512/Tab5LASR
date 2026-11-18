@@ -6,7 +6,7 @@ idf_component_register(
     "tab5_recovery_policy.c" "tab5_power_recovery.c" "tab5_power_widget.c"
     # Compiled storage primitives, intentionally NOT started from app_main.
     # No camera, battery, partition, or flash behavior changes in this review.
-    "lasr_session_fs.c" "lasr_session_store.c" "lasr_transfer_guard.c"
+    "lasr_session_fs.c" "lasr_session_store.c" "lasr_transfer_guard.c" "lasr_sd_device.c"
   INCLUDE_DIRS "."
-  REQUIRES esp_driver_ppa
+  REQUIRES esp_driver_ppa fatfs sdmmc
 )
