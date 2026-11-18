@@ -31,6 +31,11 @@ int main(void) {
     assert(!onboard_color_apply_rgb565(colors, 3, ONBOARD_COLOR_MODE_COUNT));
     assert(onboard_color_apply_rgb565(colors, 3, ONBOARD_COLOR_SWAP_RED_BLUE));
     assert(colors[0] == 0x001Fu && colors[1] == 0x07E0u && colors[2] == 0xF800u);
+    // Combined mode first swaps 0xF800 (pure red) to 0x001F (blue),
+    // then reverses the bytes, yielding 0x1F00 by design.
+    uint16_t sample[] = {0xF800u};
+    assert(onboard_color_apply_rgb565(sample, 1, ONBOARD_COLOR_SWAP_BOTH));
+    assert(sample[0] == 0x1F00u);
     assert(strcmp(onboard_color_mode_name(ONBOARD_COLOR_ORIGINAL), "ORIGINAL") == 0);
     // Explicit composite expectation: red -> blue -> byte-reversed blue.
     uint16_t composite[] = {0xF800u};
