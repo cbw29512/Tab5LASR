@@ -1,0 +1,51 @@
+# Tab5 LASR — MVP engineering log
+
+**2026-11-18 — Target template and camera shot timer browser MVP**
+
+## Definition of Done — browser MVP
+
+- Five recognizable **original illustrative** training target templates.
+- Pick target, adjust four alignment handles, store alignment for each target locally.
+- Saved geometry restores on browser restart, but alignment must be confirmed again.
+- Start runs audible 3/5/10-second countdown, then begins monotonic elapsed clock at GO.
+- Pause freezes accumulated time; resume repeats countdown; stop cancels pending audio.
+- Manual demo-shot injection produces elapsed/split time, score zone and point total.
+- Export CSV of simulated shots, usable offline, without external services.
+- Browser tests for states, persistence, template switches, countdown, shot splits, and termination.
+- No firmware, partition, charger, camera source, or Wi-Fi firmware changes.
+
+## Browser state schema (v1)
+
+`Settings { schemaVersion: 1, activeTemplateId, profiles: Record<templateId,{corners: [4][2],savedAt}> }`.
+Each corner is in preview SVG coordinates (760×410); this is **browser-only** prototype data.
+`Session {phase: CHECK_ALIGNMENT|READY|COUNTDOWN|ACTIVE|PAUSED|COMPLETE,
+alignmentConfirmed, shots[], accumulatedMs,runStartedAtMs,countdownEndsAtMs}`.
+`Shot {number,x,y,u,v,zone,score,elapsedMs,splitMs,source:"demo"}`.
+
+## Explicitly deferred
+
+- On-device NVS persistence with atomic revisions and camera fingerprints.
+- Live calibrated onboard CSI frames and any real SIRT laser detection.
+- Homography and physical-size scaling; browser demonstration uses a bilinear approximation.
+- Device microSD file saving and battery-only session testing.
+- Final physical camera relocation/optical redirect.
+- Physical evidence of detection latency, false-positive rate, sensitivity, hit accuracy and battery runtime.
+
+## Existing hardware blockers (not changed)
+
+- [PR #6](https://github.com/cbw29512/Tab5LASR/pull/6) is draft: experimental MJPEG + hosted C6 Wi-Fi firmware overflowed the existing 1 MiB factory app partition. **Do not flash** or force partition changes.
+- Current camera is same-side as screen; rear-facing optical/mounting design remains unproven.
+- Preserve previously verified camera/dice-roller full-flash backups and the known-good battery/recovery controls.
+- Color 2/4 is only a preview preference, never a raw detection transform.
+
+## Build path beyond browser MVP
+
+1. Approve browser UX and test manual alignment and timer behavior.
+2. Verify on-device camera/laser frame path and exact layout before integrating target geometry.
+3. Implement universal calibrated transform and raw-frame shot detection.
+4. Design NVS calibration slots/CRC and microSD session records after verifying available partitions.
+5. Run offline hardware acceptance and then optional web camera viewer integration.
+
+## Validation record
+
+Local browser interaction tests and syntax checks are recorded in the PR description and should be rerun on every change. No physical Tab5 acceptance is claimed.
