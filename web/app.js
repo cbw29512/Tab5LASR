@@ -1,4 +1,4 @@
-import {normalizeStatus, streamHealthy, formatNumber} from "./model.js";
+import {normalizeStatus, formatNumber, shouldRetryStream, viewerState} from "./model.js";
 
 const byId = id => document.getElementById(id);
 const dom = {
@@ -9,17 +9,21 @@ const dom = {
 let streamLoaded = false;
 let lastStatus = {state: "starting", wifi_state: "disconnected"};
 let reconnecting = false;
+let pollInFlight = false;
+let lastStreamAttemptAt = 0;
 
 function draw() {
   try {
-    const live = streamHealthy(lastStatus, streamLoaded);
-    const state = live ? "live" : (lastStatus.state === "error" ? "error" : "starting");
+    const state = viewerState(lastStatus, streamLoaded);
+    const live = state === "live";
     dom.connection.dataset.state = state;
     dom.connection.textContent = live ? "Live · Tab5" :
-      (state === "error" ? "Device error" : "Connecting");
+      state === "error" ? "Device error" :
+      state === "stale" ? "Camera stale" : "Connecting";
     dom.stream.hidden = !live;
     dom.placeholder.hidden = live;
-    dom.title.textContent = state === "error" ? "Camera unavailable" : "Waiting for Tab5 camera";
+    dom.title.textContent = state === "error" ? "Camera unavailable" :
+      state === "stale" ? "Camera stream interrupted" : "Waiting for Tab5 camera";
     dom.description.textContent = lastStatus.error ??
       "Camera lens faces the target. Use this browser behind the camera.";
     byId("capture-fps").textContent = formatNumber(lastStatus.fps_capture);
@@ -38,6 +42,7 @@ function draw() {
 function openStream() {
   try {
     streamLoaded = false;
+    lastStreamAttemptAt = Date.now();
     dom.stream.onload = () => { streamLoaded = true; draw(); };
     dom.stream.onerror = () => { streamLoaded = false; draw(); };
     // Video uses :81 so the long MJPEG handler never blocks status on :80.
@@ -52,6 +57,8 @@ function openStream() {
 }
 
 async function poll() {
+  if (pollInFlight) return;
+  pollInFlight = true;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3000);
   try {
@@ -66,7 +73,12 @@ async function poll() {
     streamLoaded = false;
   } finally {
     clearTimeout(timeout);
+    pollInFlight = false;
     draw();
+    // Retry only when the device confirms a usable camera and C6 connection.
+    if (shouldRetryStream(lastStatus, streamLoaded, Date.now() - lastStreamAttemptAt)) {
+      openStream();
+    }
   }
 }
 
