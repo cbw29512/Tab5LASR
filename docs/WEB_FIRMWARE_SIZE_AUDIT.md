@@ -33,7 +33,7 @@ Numbers are **per-archive contributions to the ELF flash sections**, not direct 
 ## Acceptance gates (independent)
 
 - App **must be <=1,048,576 bytes** if existing partition retained.
-- Reuse known-good ESP32-P4 v1.3 image metadata, upright camera orientation, Color 1 as display baseline.
+- Reuse known-good ESP32-P4 v1.3 image metadata, upright camera orientation, Color 2 (swap red/blue) as the user-selected display baseline; true camera color accuracy remains unverified.
 - Keep charger P4/P5/P7 safety sequence, INA226 monitor, and two-tap timed recovery available.
 - Onboard C6 ESP-Hosted factory firmware compatibility remains **unproven**, no automatic C6 reflash.
 - JPEG pipeline reports actual frame freshness; never mark browser LIVE because only the CSI sensor is running.
