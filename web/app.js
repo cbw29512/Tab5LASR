@@ -40,7 +40,11 @@ function openStream() {
     streamLoaded = false;
     dom.stream.onload = () => { streamLoaded = true; draw(); };
     dom.stream.onerror = () => { streamLoaded = false; draw(); };
-    dom.stream.src = `/stream?reload=${Date.now()}`;
+    // Video uses :81 so the long MJPEG handler never blocks status on :80.
+    const streamUrl = new URL("/stream", window.location.href);
+    streamUrl.port = "81";
+    streamUrl.searchParams.set("reload", String(Date.now()));
+    dom.stream.src = streamUrl.href;
     draw();
   } catch (error) {
     console.error("Could not open the Tab5 MJPEG stream", error);
