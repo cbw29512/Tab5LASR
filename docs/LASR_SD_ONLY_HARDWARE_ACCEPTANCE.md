@@ -42,3 +42,13 @@ Without `-Flash` the helper downloads the SD-only artifact, checks the CI run an
 After inspecting the verified test plan and checking that your current camera firmware can be restored, `-Flash` can be supplied to the **same helper** for a deliberate application-only install. Even then, the preflight requires typing `FLASH LASR DIAGNOSTIC` and writes **only** at `0x10000`; it never erases or repartitions the Tab5.
 
 After an authorized SD-only firmware install, the camera will be disabled by design. Look for on-screen `microSD DIAGNOSTIC: PASS` or `FAILED`, review the USB serial logs, then inspect the uniquely named `LASR/diagnostics/synthetic-session-...` folder using the microSD card on a computer. Do not mistake the synthetic test data for laser shots or silently restore the camera without a validated restore procedure.
+
+## Remount persistence verification and Windows inspection
+
+The SD-only engineering diagnostic now unmounts the microSD filesystem after writing its synthetic session, remounts it with auto-formatting disabled, and independently reads all four expected files byte-for-byte. It unmounts again before showing PASS. The post-remount check detects missing files, unexpected extra rows, modified metadata, and inconsistent journal/CSV content. Physical power-cycle persistence and card removal still require hands-on testing.
+
+After a safely completed diagnostic, remove the card and attach it to Windows. From PowerShell 5.1 on the LASR review branch, run the read-only verifier (replace E: with the mounted card):
+
+    & .\tools\VERIFY_LASR_SD_RESULTS.ps1 -CardRoot 'E:\'
+
+The script verifies exactly two UNSCORED fake events and rejects missing/corrupted CSV, journal, or JSON. It does not write, delete, format, or alter the card. Windows CI includes a passing fixture and a deliberately corrupted fixture that must fail. Neither check certifies real SIRT laser shots or concurrent camera and SD recording.

@@ -6,6 +6,7 @@ on:
       - '.github/workflows/lasr-hardware-diagnostic-build.yml'
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
       - 'tools/PREPARE_LASR_SD_TEST.ps1'
+      - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
   workflow_dispatch:
 
 jobs:
@@ -72,7 +73,8 @@ jobs:
           $tokens = $null
           $errors = $null
           foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
-                              'tools/PREPARE_LASR_SD_TEST.ps1')) {
+                              'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -84,3 +86,25 @@ jobs:
             Write-Host "PASS: PowerShell 5.1 syntax $path"
           }
           Write-Host 'No device connected or flashed.'
+      - name: Read-only SD verifier accepts fixture and rejects tampering
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'lasr-sd-card'
+          $path = Join-Path $root 'LASR\diagnostics\synthetic-session-A1\LASR\sessions\fake_shots'
+          New-Item -ItemType Directory -Force -Path $path | Out-Null
+          $rows = @('shot,elapsed_ms,split_ms,zone,score,x_norm,y_norm',
+                    '1,150,150,UNSCORED,0,0.250000,0.500000',
+                    '2,410,260,UNSCORED,0,0.750000,0.400000')
+          $csv = ($rows -join [char]10) + [char]10
+          $session = '{"schema_version":1,"session_id":"fake_shots","target_id":"synthetic_test","status":"complete","shot_count":2,"score_total":0,"elapsed_ms":410,"start_delay_ms":3000,"save_state":"saved"}'
+          $target = '{"schema_version":1,"target_id":"synthetic_test","calibration_revision":1}'
+          [IO.File]::WriteAllText((Join-Path $path 'shots.csv'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'shots.pending'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'session.json'), $session + [char]10)
+          [IO.File]::WriteAllText((Join-Path $path 'target.json'), $target + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -ne 0) { throw 'Valid synthetic SD fixture was rejected' }
+          [IO.File]::AppendAllText((Join-Path $path 'shots.csv'), 'TAMPER' + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
+          Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'

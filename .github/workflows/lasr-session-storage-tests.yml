@@ -9,6 +9,7 @@ on:
       - 'onboard/main/lasr_laser_blob.*'
       - 'onboard/main/lasr_shot_clock.*'
       - 'onboard/main/lasr_sd_smoke*'
+      - 'onboard/main/lasr_sd_session_verify.*'
       - 'onboard/main/lasr_laser_pipeline.*'
       - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
@@ -23,6 +24,7 @@ on:
       - 'onboard/main/lasr_laser_blob.*'
       - 'onboard/main/lasr_shot_clock.*'
       - 'onboard/main/lasr_sd_smoke*'
+      - 'onboard/main/lasr_sd_session_verify.*'
       - 'onboard/main/lasr_laser_pipeline.*'
       - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
@@ -97,3 +99,12 @@ jobs:
             onboard/main/lasr_sd_session_probe.c \
             onboard/tests/test_lasr_sd_session_probe.c -lm -o /tmp/lasr_session_probe
           /tmp/lasr_session_probe
+      - name: Verify diagnostic session after card remount (host simulation)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/main/lasr_sd_session_probe.c onboard/main/lasr_sd_session_verify.c \
+            onboard/tests/test_lasr_sd_session_verify.c -lm -o /tmp/lasr_sd_durable
+          /tmp/lasr_sd_durable
