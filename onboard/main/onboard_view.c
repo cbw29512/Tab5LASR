@@ -1,5 +1,7 @@
 #include "onboard_view.h"
 #include "onboard_ppa.h"
+#include "onboard_color.h"
+#include "onboard_color_ui.h"
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -65,8 +67,20 @@ bool onboard_view_show(const void *frame_bytes, size_t length,
         ESP_LOGE(TAG, "Cannot lock LVGL for camera frame");
         return false;
     }
-    const bool ok = onboard_ppa_convert(frame_bytes,
+    bool ok = onboard_ppa_convert(frame_bytes,
                       g_canvas_pixels[buffer_index], g_capacity);
+    if (ok) {
+        // Only the displayed RGB565 pixels are modified after PPA output.
+        // The V4L2 camera buffer, PPA rotation, battery and charging state
+        // are deliberately not changed by this diagnostic.
+        ok = onboard_color_apply_rgb565(
+            (uint16_t *)g_canvas_pixels[buffer_index],
+            (size_t)g_width * g_height,
+            onboard_color_ui_mode());
+        if (!ok) {
+            ESP_LOGE(TAG, "RGB565 color diagnostic transform failed");
+        }
+    }
     if (ok) {
         lv_canvas_set_buffer(g_canvas, g_canvas_pixels[buffer_index],
                              g_width, g_height, LV_COLOR_FORMAT_RGB565);
