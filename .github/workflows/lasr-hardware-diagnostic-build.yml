@@ -4,6 +4,7 @@ on:
     paths:
       - 'onboard/**'
       - '.github/workflows/lasr-hardware-diagnostic-build.yml'
+      - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
   workflow_dispatch:
 
 jobs:
@@ -59,3 +60,20 @@ jobs:
           path: diagnostic-review/
           retention-days: 14
           if-no-files-found: error
+
+  windows-powershell-51-preflight-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify diagnostic script parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1', [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-Table -AutoSize
+            throw 'PowerShell 5.1 syntax parser rejected the diagnostic preflight script'
+          }
+          Write-Host 'PowerShell 5.1 AST parsing passed. No device connected or flashed.'
