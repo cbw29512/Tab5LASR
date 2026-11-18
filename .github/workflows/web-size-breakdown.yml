@@ -1,0 +1,33 @@
+name: LASR Web Size Breakdown (read-only)
+on:
+  push:
+    branches: ['feat/lasr-onboard-web-20261117']
+    paths: ['.github/workflows/web-size-breakdown.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect-previous-firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download existing CI review artifact only
+        uses: actions/download-artifact@v4
+        with:
+          name: web-camera-2m-candidate-NOT-FLASH-APPROVED-c35bf3b6dff7a4ae3b821937ccbb0d7190699c05
+          run-id: 44219184773
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: size-review
+      - name: Show flash and RAM usage by component; no flashing
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s size-review/lasr-size-components.txt
+          test -s size-review/lasr-size-files.txt
+          echo '==== TOP COMPONENTS / FLASH + RAM ===='
+          head -n 125 size-review/lasr-size-components.txt
+          echo '==== FILE BREAKDOWN (first 100 lines) ===='
+          head -n 100 size-review/lasr-size-files.txt
+          echo '==== REVIEW ONLY ===='
+          echo 'The device still has a 1MiB factory partition; NEVER flash this 2MiB candidate.'
