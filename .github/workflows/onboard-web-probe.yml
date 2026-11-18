@@ -38,6 +38,9 @@ jobs:
           esp_idf_version: release-v6.1
           target: esp32p4
           path: onboard
+          # Size analysis runs inside the same ESP-IDF container as the build.
+          # Reports are written to the mounted project workspace for review.
+          command: "idf.py build && idf.py size-components > build/lasr-size-components.txt && idf.py size-files > build/lasr-size-files.txt"
       - name: Review only — require exact 2MiB factory layout and ESP32-P4 rev1.x
         shell: bash
         run: |
@@ -64,4 +67,6 @@ jobs:
           path: |
             onboard/build/tab5lasr_onboard.bin
             onboard/build/partition_table/partition-table.bin
+            onboard/build/lasr-size-components.txt
+            onboard/build/lasr-size-files.txt
           retention-days: 14
