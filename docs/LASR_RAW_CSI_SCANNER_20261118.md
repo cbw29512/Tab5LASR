@@ -91,3 +91,11 @@ The old `tools/FLASH_CAMERA_ONLY.ps1` requires a **dice-roller** backup filename
 Default invocation performs only read-only checks: verifies private recovery marker + two original physical readback hashes, SHA-256, original 0x10000/1 MiB factory app partition, candidate chip revision and image SHA-256, and rereads the **current connected Tab5 flash** to ensure it matches that recovery. No flash is written. `-Flash` is an explicit opt-in that STILL requires a typed `FLASH LASR DIAGNOSTIC` confirmation before writing only the application at 0x10000. It must only be considered after the selected opt-in diagnostic CI job passes and the actual device is physically available. Failed checks block installation and never write. A separate Windows PowerShell 5.1 parser CI job checks the script syntax (not any hardware operation).
 
 **Do not use the prior dice-only installer for the working LASR camera.** Do not flash any diagnostic unless the source-of-truth backup and review binary are reverified. The app cannot recover an interrupted flash automatically; a separate manual recovery procedure is necessary.
+
+## microSD diagnostic size blocker and guarded LTO experiment
+
+- GitHub opt-in build `sd-smoke` on commit `ba932cc8` compiled and linked the ESP32-P4 binary, but the ESP-IDF partition-size gate rejected it: image `0x102650` = 1,058,384 bytes vs installed factory app partition `0x100000` = 1,048,576 bytes. **Overflow 0x2650 = 9,808 bytes.** This is a hard *image-size blocker*, not a compiler API failure. No flashing or partition change.
+- Raw-CSI-only opt-in build passed its own full build and 1 MiB safety gate.
+- New experiment adds `CONFIG_COMPILER_LTO_LINKTIME=y` and `CONFIG_COMPILER_LTO_COMPILETIME=y` to **the SD-smoke diagnostic CI configuration only**. Both are documented ESP-IDF compiler settings. This may reduce unused code; its effectiveness is unverified until GitHub reports the actual size. The normal camera firmware configuration and its power controls are not changed.
+- **Keep the 1 MiB size rejection unchanged.** LTO also changes generated code and possible task-stack behavior; even a size-passing artifact is **review only**, never automatically flashed or claimed safe without physical power/camera and microSD acceptance.
+- Failed original job: https://github.com/cbw29512/Tab5LASR/actions/runs/44330527411 .
