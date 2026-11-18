@@ -22,7 +22,7 @@ jobs:
           set -euo pipefail
           case "${{ matrix.mode }}" in
             sd-smoke)
-              printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\n' >> onboard/sdkconfig.defaults ;;
+              printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\nCONFIG_COMPILER_LTO_LINKTIME=y\nCONFIG_COMPILER_LTO_COMPILETIME=y\n' >> onboard/sdkconfig.defaults ;;
             raw-csi)
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
             *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
