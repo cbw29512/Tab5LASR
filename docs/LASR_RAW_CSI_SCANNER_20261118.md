@@ -62,3 +62,11 @@ Video format references:
 - [Espressif esp_video component formats](https://components.espressif.com/components/espressif/esp_video/versions/2.0.0/changelog?language=en): maps `RGB565` to little endian, `RGB565X` to big endian, and provides UYVY.
 - [Linux V4L2 RGB pixel formats](https://cdn.kernel.org/doc/html/latest/userspace-api/media/v4l/pixfmt-rgb.html).
 - [Existing onboard CSI camera source](../onboard/main/onboard_capture.c) and [pulse detector](../onboard/main/lasr_laser_pulse.c).
+
+## Device monotonic shot clock (also added in this review)
+
+- `lasr_shot_clock.{h,c}` provides `IDLE -> COUNTDOWN -> ACTIVE -> PAUSED -> COUNTDOWN -> ACTIVE -> COMPLETE` states. It accepts only 3-, 5- or 10-second delays as agreed for the MVP.
+- **GO time is supplied by the actual audible-signal caller** when that mechanism is implemented. An elapsed timer must never begin when the Start button is clicked or before the audible GO signal.
+- A debounced laser event supplies `first_seen_us`. The clock verifies this occurred on/after actual GO, calculates monotonic elapsed and per-shot split excluding paused/resume-countdown time, and emits a `lasr_shot_t` record with `score=0` and `zone=UNSCORED` until proper camera-to-target scoring is certified.
+- No shot is written to microSD by the clock alone. The physical buzzer, on-device Start/Pause/Stop buttons, calibrated homography and writer integration still need separate implementation and hardware tests.
+- `test_lasr_shot_clock.c` checks countdown gating, GO origin, duplicate/nonmonotonic events, pause/resume, splits and stop. **Synthetic tests are not physical hardware validation.**

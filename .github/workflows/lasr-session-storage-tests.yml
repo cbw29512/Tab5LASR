@@ -7,6 +7,7 @@ on:
       - 'onboard/main/lasr_laser_pulse.*'
       - 'onboard/main/lasr_raw_pixel.*'
       - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_shot_clock.*'
       - 'onboard/main/lasr_laser_pipeline.*'
       - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
@@ -19,6 +20,7 @@ on:
       - 'onboard/main/lasr_laser_pulse.*'
       - 'onboard/main/lasr_raw_pixel.*'
       - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_shot_clock.*'
       - 'onboard/main/lasr_laser_pipeline.*'
       - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
@@ -68,3 +70,11 @@ jobs:
             onboard/main/lasr_csi_format.c \
             onboard/tests/test_lasr_laser_blob.c -lm -o /tmp/lasr_blob
           /tmp/lasr_blob
+      - name: Device shot clock GO and split tests (synthetic only)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_shot_clock.c \
+            onboard/tests/test_lasr_shot_clock.c -lm -o /tmp/lasr_clock
+          /tmp/lasr_clock
