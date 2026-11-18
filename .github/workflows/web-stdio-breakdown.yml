@@ -1,0 +1,31 @@
+name: LASR Stdio Linked Object Audit
+on:
+  push:
+    branches: [feat/lasr-onboard-web-20261117]
+    paths: [.github/workflows/web-stdio-breakdown.yml]
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read existing optimized ELF size reports; no build or hardware
+        uses: actions/download-artifact@v4
+        with:
+          name: lasr-slim-size-reports-03711c024af05b9863b8b1bdfa361e109eb92592
+          run-id: 44225801920
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: slim
+      - name: Inspect exact linked objects contributing to STDIO and camera
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s slim/slim-files.txt
+          echo '=== FILE REPORT HEAD ==='
+          head -n 26 slim/slim-files.txt
+          echo '=== STDIO SYMBOLS AND REFERENCED OBJECTS ==='
+          grep -n -E -i 'stdio|vfs_console|lvgl.*\.a|esp_ipa|espressif__esp_video' slim/slim-files.txt | head -n 85 || true
+          echo '=== END, NO FLASH ==='
