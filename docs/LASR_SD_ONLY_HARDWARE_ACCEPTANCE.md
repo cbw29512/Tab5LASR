@@ -25,3 +25,20 @@ Verify **actual** microSD I/O and complete session-format persistence on the phy
 ## Still NOT proven
 
 Live CSI+SD concurrent use, camera/SIRT pulse sensitivity, calibrated shooting sessions, USB removable drive file transfer, and Wi-Fi download remain separate work. The synthetic file must never appear in live scoreboards.
+
+## Download and safe device preflight (Windows PowerShell 5.1)
+
+**Do not run the flash path until the exact selected diagnostic CI run has succeeded, the currently installed camera's full 16 MiB recovery backup and SHA-256 marker are available, and the correct COM port is confirmed.** This procedure changes no firmware unless `-Flash` is explicitly supplied and a further typed confirmation is given.
+
+From a clone of the Tab5LASR review branch, use the helper `tools/PREPARE_LASR_SD_TEST.ps1`. Supply the exact **successful** GitHub diagnostic run ID and the actual folder containing the current-camera backup; do not use the older dice-roller backup. Example syntax:
+
+```powershell
+& .\tools\PREPARE_LASR_SD_TEST.ps1 -RunId <VERIFIED_RUN_ID> `
+    -CameraBackupFolder '<YOUR_CURRENT_CAMERA_BACKUP_FOLDER>' -Port COM5
+```
+
+Without `-Flash` the helper downloads the SD-only artifact, checks the CI run and delegates to the read-only preflight. That preflight reads the connected Tab5's full flash to compare it with the verified **current-camera backup** and checks the candidate's SHA-256, chip revision, original factory partition and size. It intentionally rejects a mismatched live device. The artifact itself expires and does not substitute for the private full-flash recovery backup.
+
+After inspecting the verified test plan and checking that your current camera firmware can be restored, `-Flash` can be supplied to the **same helper** for a deliberate application-only install. Even then, the preflight requires typing `FLASH LASR DIAGNOSTIC` and writes **only** at `0x10000`; it never erases or repartitions the Tab5.
+
+After an authorized SD-only firmware install, the camera will be disabled by design. Look for on-screen `microSD DIAGNOSTIC: PASS` or `FAILED`, review the USB serial logs, then inspect the uniquely named `LASR/diagnostics/synthetic-session-...` folder using the microSD card on a computer. Do not mistake the synthetic test data for laser shots or silently restore the camera without a validated restore procedure.
