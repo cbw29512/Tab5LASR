@@ -29,17 +29,17 @@ static esp_err_t status_handler(httpd_req_t *req) {
         const int64_t window = now - s_last_sample_us;
         s_fps_capture = window > 0 ? (double)(g_onboard_status.captured_frames -
             s_last_capture) * 1000000.0 / window : 0;
-        s_fps_stream = window > 0 ? (double)(s_sent_count -
+        s_fps_stream = window > 0 ? (double)(__atomic_load_n(&s_sent_count, __ATOMIC_RELAXED) -
             s_last_sent) * 1000000.0 / window : 0;
         s_last_capture = g_onboard_status.captured_frames;
-        s_last_sent = s_sent_count;
+        s_last_sent = __atomic_load_n(&s_sent_count, __ATOMIC_RELAXED);
         s_last_sample_us = now;
     }
-    int64_t age = -1;
-    const bool has_frame = (g_onboard_status.last_frame_monotonic_us > 0);
-    if (has_frame) age = (now - g_onboard_status.last_frame_monotonic_us) / 1000;
+    // A healthy sensor alone is not a live WEB feed: JPEG must be fresh.
+    const int64_t jpeg_age_us = lasr_web_frame_age_us();
+    const int64_t age = jpeg_age_us >= 0 ? jpeg_age_us / 1000 : -1;
     const char *state = g_onboard_status.state == ONBOARD_STREAMING ?
-        (has_frame && age >= 0 && age < 3000 ? "live" : "stale") :
+        (age >= 0 && age < 3000 ? "live" : "stale") :
         (g_onboard_status.state == ONBOARD_ERROR ? "error" : "starting");
     const tab5_power_reading_t battery = tab5_power_diag_read();
     char battery_json[24] = "null";
