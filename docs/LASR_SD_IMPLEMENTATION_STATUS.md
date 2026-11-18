@@ -52,3 +52,11 @@ Reference: https://github.com/cbw29512/Tab5LASR/pull/8
 - Documented RISC-V `CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS` is being evaluated separately, with post-build physical camera FPS and stack behavior still mandatory before any install.
 - A separate LVGL unused-widget candidate branch `feat/lasr-sd-size-probe-20261118` is benchmark-only; the stable camera+charger controls stay intact.
 - **No partition migration, flash, recovery-image changes or device writes.**
+
+## Final CI candidate: original factory partition retained
+
+- GitHub Actions [run 44276095419](https://github.com/cbw29512/Tab5LASR/actions/runs/44276095419) completed **SUCCESS** for host-contract and full ESP-IDF 6.1 firmware/chip-revision/1 MiB size gate.
+- App size **981,184 bytes** (`0xEF8C0`); factory app capacity **1,048,576 bytes**; remaining headroom **67,392 bytes** (`0x10740`, 6%).
+- Achieved by selectively disabling unused LVGL widgets while retaining CANVAS, BUTTON, LABEL, IMAGE, default theme, touch, camera and guarded battery controls. Normal Info/Error/Warning diagnostic logging restored; experimental save/restore compiler and LTO flags removed.
+- Independent small-widget probe [run 44275221103](https://github.com/cbw29512/Tab5LASR/actions/runs/44275221103) was also green, app 970,848 bytes with reduced logging; current 981,184-byte result is the preferred **more diagnostic** candidate.
+- This is a **compiled review candidate only**, not proof the LVGL buttons, battery recovery, touch, microSD or camera work physically after the change. **DO NOT FLASH** until separately verifying installed backups and bench acceptance plan. The queued SD+USB combined review build requires its own green check.
