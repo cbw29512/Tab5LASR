@@ -1,0 +1,4 @@
+# Experimental ESP-IDF supported link-time optimizer.
+# Do not apply to current working hardware without a green build and review.
+CONFIG_COMPILER_LTO_LINKTIME=y
+CONFIG_COMPILER_LTO_COMPILETIME=y
