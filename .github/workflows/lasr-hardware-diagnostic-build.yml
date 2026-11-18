@@ -1,0 +1,61 @@
+name: LASR opted-in hardware diagnostics (review only)
+on:
+  pull_request:
+    paths:
+      - 'onboard/**'
+      - '.github/workflows/lasr-hardware-diagnostic-build.yml'
+  workflow_dispatch:
+
+jobs:
+  esp32p4-diagnostic-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [sd-smoke, raw-csi]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Opt in to exactly one read-only / controlled diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.mode }}" in
+            sd-smoke)
+              printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\n' >> onboard/sdkconfig.defaults ;;
+            raw-csi)
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
+            *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
+          esac
+      - name: Compile opt-in ESP32-P4 firmware with pinned project config
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+      - name: Enforce original chip revision and installed 1 MiB app partition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install esptool==5.6.0
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image-info.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "DIAGNOSTIC_PROFILE=${{ matrix.mode }} IMAGE_BYTES=$SIZE MAX=1048576"
+          test "$SIZE" -le 1048576 || { echo 'STOP: image over factory 1 MiB app partition'; exit 1; }
+      - name: Package REVIEW ONLY image and safety notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-review
+          cp onboard/build/tab5lasr_onboard.bin diagnostic-review/
+          cd diagnostic-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'MODE=%s\nFLASH=NO_AUTO_FLASH\nAPP_OFFSET=0x10000\nMAX_PARTITION=1048576\nPHYSICAL_HARDWARE_TEST=NOT_DONE\n' "${{ matrix.mode }}" > FLASH_POLICY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lasr-optin-${{ matrix.mode }}-${{ github.sha }}
+          path: diagnostic-review/
+          retention-days: 14
+          if-no-files-found: error

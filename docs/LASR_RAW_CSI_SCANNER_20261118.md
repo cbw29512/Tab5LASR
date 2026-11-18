@@ -77,3 +77,9 @@ Video format references:
 - `lasr_sd_smoke_io.{h,c}` is portable and has host tests proving that it rejects path traversal, verifies file content, removes only its own successfully verified test file, and does **not overwrite an existing file**. A failed diagnostic leaves partial test data for investigation rather than declaring success.
 - Opting into this mode requires a separate verified device-image build and size/recovery checks; no release, automatic device flash or active-state change is made by adding the code. A passing host test is not proof of physical SD compatibility.
 - **No actual shooting sessions are recorded yet.** Existing `lasr_recorder_task` still requires a touchscreen-driven Start/Finish session and calibrated actual laser events.
+
+## Independent opt-in ESP32-P4 build validation
+
+- New `.github/workflows/lasr-hardware-diagnostic-build.yml` compiles **two separate engineering variants**: `sd-smoke` and `raw-csi`. It enables **only one** diagnostic flag per build, so a card readback test does not simultaneously impose raw-camera scanning load.
+- Each variant must pass the ESP32-P4 v1.3 compatibility image-info checks and **strict 1 MiB installed application partition size gate**. It publishes only a time-limited review artifact with a SHA-256 manifest and explicit NO_AUTO_FLASH notice; no bootloader, partitions, NVS, C6 Wi-Fi or physical Tab5 are modified.
+- Builds prove compile/link/configuration compatibility only, not physical safety, SD card readback, SIRT detection, battery runtime, USB transfer or scores. A verified recovery image, a device-specific flashing procedure and physical acceptance are separately required before using either binary.
