@@ -49,3 +49,10 @@ alignmentConfirmed, shots[], accumulatedMs,runStartedAtMs,countdownEndsAtMs}`.
 ## Validation record
 
 Local browser interaction tests and syntax checks are recorded in the PR description and should be rerun on every change. No physical Tab5 acceptance is claimed.
+
+## GitHub CI verification (2026-11-18)
+
+- Local Node test suite: **7 passed, 0 failed**; source syntax checks passed.
+- GitHub Actions workflow: [successful run 44264568231](https://github.com/cbw29512/Tab5LASR/actions/runs/44264568231).
+- A second [successful run 44264516169](https://github.com/cbw29512/Tab5LASR/actions/runs/44264516169) also completed.
+- This verifies the automated model/timer workflow, **not** live browser click testing or real Tab5 hardware operation. Browser automation in the current execution environment was blocked at page navigation and remains pending on a normal browser.
