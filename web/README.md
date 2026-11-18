@@ -1,6 +1,6 @@
-# Browser-first camera viewer
+# Optional browser companion for a self-contained LASR camera
 
-The Tab5 lens and screen are on the same face. Mount the Tab5 with its lens facing the paper target; the shooter uses this page from a phone or computer behind the device.
+The factory Tab5 lens and screen are on the same face. Until we validate a rear-facing lens arrangement, this browser helps test the prototype, but the finished LASR must run fully offline on Tab5 battery, screen, camera and microSD. See `docs/PORTABLE_STANDALONE_CONTRACT.md`.
 
 ## Status
 
