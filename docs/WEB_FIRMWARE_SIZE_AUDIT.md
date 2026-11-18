@@ -11,7 +11,7 @@ The archived size-components report (run `44224178107`) identifies significant f
 | Linked archive | Flash bytes | Notes |
 |---|---:|---|
 | `liblvgl__lvgl.a` | 304,119 | Camera canvas + local battery recovery touch UI; cannot remove recovery blindly |
-| `libesp_stdio.a` | 162,571 | Unexpectedly large `.rodata` in `stdio_vfs.c.obj`; investigate exact symbols before claiming removable |
+| `libesp_stdio.a` | 162,571 | Per-archive attribution includes large linker-region padding: actual `stdio_vfs.c.obj` named symbols are only hundreds of bytes. **Not a genuine 163KB removable console feature.** |
 | `liblwip.a` | 86,484 | Network TCP/IP |
 | `libeh_proto_v2.a` | 80,862 | ESP-Hosted protocol |
 | `libespressif__esp_video.a` | 57,888 | Onboard CSI video |
@@ -25,7 +25,9 @@ Numbers are **per-archive contributions to the ELF flash sections**, not direct 
 ## Safe optimization experiments
 
 1. **Minimal LVGL.** Keep `BUTTON`, `LABEL`, `CANVAS`, `IMAGE` widgets, touchscreen and **guarded battery recovery**; omit unused widgets in `sdkconfig.lvgl_slim_probe`. Build separately under `web-slim-probe.yml`; compare exact app bytes against 1,346,992 baseline.
-2. **Confirm unexpected stdio size** with symbol inspection, not speculative disabling. `tools/print_stdio_symbols.sh` / `web-symbol-probe.yml` will inspect the compiled `stdio_vfs.c.obj` and LVGL archive; logs and serial diagnostics must remain usable.
+2. **Stdio disproved as a 163KB saving.** CI [symbol probe run 44224906755](https://github.com/cbw29512/Tab5LASR/actions/runs/44224906755) showed the largest named `stdio_vfs.c.obj` symbols are about 166 bytes and 142 bytes, with most other functions tens of bytes. The size report's 162KB attribution is dominated by linker region/alignment overhead, not that source file's actual contents. Do **not** disable console logging expecting 163KB savings.
+3. **Use supported LVGL widget switches, not `LV_CONF_MINIMAL`.** The managed LVGL revision explicitly rejects the removed `LV_CONF_MINIMAL` flag. Enable required `BUTTON`, `LABEL`, `CANVAS`, `IMAGE`, theme and touch, disable individual unused widgets; benchmark the real image size in the revised slim CI build.
+4. **LTO candidate.** Try documented ESP-IDF `CONFIG_COMPILER_LTO_LINKTIME` and `CONFIG_COMPILER_LTO_COMPILETIME` only in CI. Preserve serial logs and charger state machine, and compare exact image size.
 3. If still too large, create a smaller display backend only after proving equivalent battery recovery and touch behavior, or split streaming from the main ESP32-P4 app into an independently verified co-processor architecture. **Do not silently drop battery functionality or laser capture accuracy.**
 
 ## Acceptance gates (independent)
