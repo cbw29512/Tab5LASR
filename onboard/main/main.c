@@ -4,6 +4,10 @@
 #include "tab5_battery_monitor.h"
 #include "tab5_power_widget.h"
 #include "onboard_color_ui.h"
+#include "sdkconfig.h"
+#if CONFIG_LASR_SD_SMOKE_ON_BOOT
+#include "lasr_sd_smoke.h"
+#endif
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
 #include "lvgl.h"
@@ -43,6 +47,11 @@ void app_main(void) {
     }
     bsp_display_unlock();
 
+#if CONFIG_LASR_SD_SMOKE_ON_BOOT
+    // Explicit test build only. Never format the card or overwrite sessions.
+    if (lasr_sd_smoke_once() != ESP_OK)
+        ESP_LOGE(TAG, "Opt-in microSD test failed; camera will still start");
+#endif
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG, "Built-in camera failed; see CSI sensor/format errors");

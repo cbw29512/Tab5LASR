@@ -70,3 +70,10 @@ Video format references:
 - A debounced laser event supplies `first_seen_us`. The clock verifies this occurred on/after actual GO, calculates monotonic elapsed and per-shot split excluding paused/resume-countdown time, and emits a `lasr_shot_t` record with `score=0` and `zone=UNSCORED` until proper camera-to-target scoring is certified.
 - No shot is written to microSD by the clock alone. The physical buzzer, on-device Start/Pause/Stop buttons, calibrated homography and writer integration still need separate implementation and hardware tests.
 - `test_lasr_shot_clock.c` checks countdown gating, GO origin, duplicate/nonmonotonic events, pause/resume, splits and stop. **Synthetic tests are not physical hardware validation.**
+
+## Explicit microSD physical-test entry point (disabled by default)
+
+- Added `CONFIG_LASR_SD_SMOKE_ON_BOOT` (default `n`) and `lasr_sd_smoke_once()` for a **deliberately enabled** engineering firmware build. After normal display and P4/P5/P7 battery/recovery startup, it mounts microSD using the existing no-format adapter, calls an exclusive-file read/write/verification smoke test under `/LASR/diagnostics`, then unmounts.
+- `lasr_sd_smoke_io.{h,c}` is portable and has host tests proving that it rejects path traversal, verifies file content, removes only its own successfully verified test file, and does **not overwrite an existing file**. A failed diagnostic leaves partial test data for investigation rather than declaring success.
+- Opting into this mode requires a separate verified device-image build and size/recovery checks; no release, automatic device flash or active-state change is made by adding the code. A passing host test is not proof of physical SD compatibility.
+- **No actual shooting sessions are recorded yet.** Existing `lasr_recorder_task` still requires a touchscreen-driven Start/Finish session and calibrated actual laser events.
