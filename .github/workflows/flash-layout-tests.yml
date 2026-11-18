@@ -4,7 +4,10 @@ on:
     branches: [main]
     paths:
       - 'tools/inspect_flash_layout.py'
+      - 'tools/audit_factory_expansion.py'
+      - 'tools/CHECK_TAB5_WEB_EXPANSION.ps1'
       - 'firmware/tests/test_inspect_flash_layout.py'
+      - 'firmware/tests/test_audit_factory_expansion.py'
       - '.github/workflows/flash-layout-tests.yml'
   workflow_dispatch:
 jobs:
@@ -16,9 +19,11 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest discover -s firmware/tests -p 'test_inspect_flash_layout.py' -v
+          python -m unittest discover -s firmware/tests -p 'test_audit_factory_expansion.py' -v
           python tools/inspect_flash_layout.py --help
+          python tools/audit_factory_expansion.py --help
       - name: Ensure no flash mutation commands in parser
         run: |
-          if grep -E 'write.flash|erase.flash|subprocess|os.system' tools/inspect_flash_layout.py; then
+          if grep -Ei 'write.flash|erase.flash|subprocess|os.system|write-flash|erase-flash' tools/inspect_flash_layout.py tools/audit_factory_expansion.py tools/CHECK_TAB5_WEB_EXPANSION.ps1; then
             echo 'Inspector contains a write/process command'; exit 1
           fi
