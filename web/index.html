@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>Tab5 LASR — Camera Viewer</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div><span class="eyebrow">TAB5 LASR</span><h1>Target camera</h1>
+      <p class="muted">Built-in lens faces the target. Watch from this browser.</p></div>
+      <div class="connection" id="connection" data-state="starting" role="status" aria-live="polite">Connecting</div>
+    </header>
+    <section class="camera" aria-label="Live target camera">
+      <img id="stream" class="stream" alt="Tab5 onboard camera viewing a target" hidden>
+      <div id="placeholder" class="placeholder" role="status">
+        <span class="loader" aria-hidden="true"></span>
+        <strong id="placeholder-title">Waiting for Tab5 camera</strong>
+        <span id="placeholder-description">This page needs a live stream from your Tab5 on the same Wi-Fi network.</span>
+      </div>
+      <div class="camera-label">CAMERA-SIDE VIEW · NOT YOUR PHONE CAMERA</div>
+    </section>
+    <section class="stats" aria-label="Camera diagnostics">
+      <div><span>Camera FPS</span><strong id="capture-fps">—</strong></div>
+      <div><span>Stream FPS</span><strong id="stream-fps">—</strong></div>
+      <div><span>Frame age</span><strong id="frame-age">—</strong></div>
+      <div><span>Battery</span><strong id="battery">—</strong></div>
+      <div><span>Resolution</span><strong id="resolution">—</strong></div>
+      <div><span>Dropped frames</span><strong id="dropped">—</strong></div>
+    </section>
+    <footer class="actions">
+      <button id="reconnect" type="button">Reconnect camera</button>
+      <p>Local-network viewer. No recording or cloud upload. Live laser detection and scoring come next.</p>
+    </footer>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
