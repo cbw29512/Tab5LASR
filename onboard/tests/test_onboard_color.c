@@ -12,7 +12,9 @@ static void check_reversible_modes(void) {
         0x0000u, // black
         0x6B4Du  // arbitrary mixed color
     };
-    for (int mode = 0; mode < ONBOARD_COLOR_MODE_COUNT; ++mode) {
+    // Red/blue swap and byte swap are individually involutions.
+    // Their composition is not: operations do not commute on RGB565.
+    for (int mode = 0; mode < ONBOARD_COLOR_SWAP_BOTH; ++mode) {
         uint16_t buffer[sizeof(reference) / sizeof(reference[0])];
         memcpy(buffer, reference, sizeof(buffer));
         assert(onboard_color_apply_rgb565(
@@ -30,6 +32,10 @@ int main(void) {
     assert(onboard_color_apply_rgb565(colors, 3, ONBOARD_COLOR_SWAP_RED_BLUE));
     assert(colors[0] == 0x001Fu && colors[1] == 0x07E0u && colors[2] == 0xF800u);
     assert(strcmp(onboard_color_mode_name(ONBOARD_COLOR_ORIGINAL), "ORIGINAL") == 0);
+    // Explicit composite expectation: red -> blue -> byte-reversed blue.
+    uint16_t composite[] = {0xF800u};
+    assert(onboard_color_apply_rgb565(composite, 1, ONBOARD_COLOR_SWAP_BOTH));
+    assert(composite[0] == 0x1F00u);
     check_reversible_modes();
     return 0;
 }
