@@ -1,5 +1,6 @@
 #include "lasr_sd_smoke.h"
 #include "lasr_sd_smoke_io.h"
+#include "lasr_sd_session_probe.h"
 #include "lasr_sd_device.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -20,15 +21,17 @@ esp_err_t lasr_sd_smoke_once(void) {
         const int n=snprintf(id,sizeof(id),"%08lx-%u",
                            (unsigned long)esp_random(),attempt);
         if (n<=0 || n>=(int)sizeof(id))break;
-        passed=lasr_sd_smoke_file(lasr_sd_root(),id);
+        passed=lasr_sd_smoke_file(lasr_sd_root(),id) &&
+               lasr_sd_session_probe(lasr_sd_root(),id);
+        if (passed) ESP_LOGI(TAG,"Synthetic session retained under /LASR/diagnostics/synthetic-session-%s",id);
     }
-    if (!passed)ESP_LOGE(TAG,"SD diagnostic write/verify failed (no formatting)");
+    if (!passed)ESP_LOGE(TAG,"SD file or synthetic session write/verify failed (no formatting)");
     const esp_err_t unmount=lasr_sd_unmount();
     if (unmount!=ESP_OK) {
         ESP_LOGE(TAG,"SD unmount failed; do not start USB export");
         return unmount;
     }
     if (!passed)return ESP_FAIL;
-    ESP_LOGI(TAG,"microSD unique-file write/readback/removal and unmount PASSED");
+    ESP_LOGI(TAG,"microSD file plus synthetic session write/readback and unmount PASSED");
     return ESP_OK;
 }

@@ -7,6 +7,7 @@
 #include "sdkconfig.h"
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
 #include "lasr_sd_smoke.h"
+#include "lasr_sd_status_ui.h"
 #endif
 #include "bsp/esp-bsp.h"
 #include "esp_log.h"
@@ -15,8 +16,7 @@
 static const char *TAG = "lasr_onboard";
 
 void app_main(void) {
-    // Camera and charger share the Tab5 board's I2C/expander setup.
-    // Display startup initializes the I2C bus before any P4/P5/P7 changes.
+    // Display initializes I2C before the guarded power-latch operations.
     lv_display_t *display = bsp_display_start();
     if (!display) {
         ESP_LOGE(TAG, "Tab5 display startup failed; camera not started");
@@ -36,7 +36,6 @@ void app_main(void) {
     if (bsp_display_brightness_set(80) != ESP_OK) {
         ESP_LOGW(TAG, "Display brightness configuration failed");
     }
-    // Always create the guarded recovery control even if camera init fails.
     if (!bsp_display_lock(0)) {
         ESP_LOGE(TAG, "LVGL lock unavailable: battery recovery UI missing");
         return;
@@ -48,17 +47,16 @@ void app_main(void) {
     bsp_display_unlock();
 
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
-    // One-purpose engineering image: preserve the display and charger
-    // safeguards, then test SD alone to fit the original 1 MiB app partition.
-    // Never claim this variant has camera capture or simultaneous CSI+SD.
+    // Test-only build: camera capture intentionally disabled. A synthetic
+    // diagnostic session is NOT physical laser scoring or recording.
     ESP_LOGW(TAG, "SD-ONLY DIAGNOSTIC: CSI camera deliberately disabled");
     const esp_err_t sd_result = lasr_sd_smoke_once();
     if (sd_result != ESP_OK) {
-        ESP_LOGE(TAG, "microSD read/write diagnostic FAILED: %s",
-                 esp_err_to_name(sd_result));
+        ESP_LOGE(TAG, "microSD diagnostic FAILED: %s", esp_err_to_name(sd_result));
     } else {
-        ESP_LOGW(TAG, "microSD read/write diagnostic PASSED; camera still disabled");
+        ESP_LOGW(TAG, "microSD file and synthetic session diagnostic PASSED");
     }
+    lasr_sd_status_ui_show(sd_result == ESP_OK);
 #else
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
