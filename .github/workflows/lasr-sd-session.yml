@@ -57,4 +57,5 @@ jobs:
             echo 'BLOCKED: existing 1MiB app partition cannot fit this image'; exit 1;
           }
       - name: No automatic firmware publish or flash
-        run: echo "Review build only: no Tab5 was flashed."
+        run: |
+          echo "Review build only: no Tab5 was flashed."
