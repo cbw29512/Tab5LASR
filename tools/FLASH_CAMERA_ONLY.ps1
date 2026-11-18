@@ -55,7 +55,7 @@ try {
     Write-Host 'Operator confirmed application-only flash at 0x10000.' -ForegroundColor Yellow
     & python -m esptool --chip esp32p4 --port $Port --baud 460800 write-flash 0x10000 $Firmware
     if ($LASTEXITCODE -ne 0) { throw 'Camera application flash failed' }
-    Write-Host 'CAMERA APPLICATION FLASH COMPLETED. Physically test USB camera, battery and logs.' -ForegroundColor Green
+    Write-Host 'CAMERA APPLICATION FLASH COMPLETED. Physically test the selected camera, battery and logs.' -ForegroundColor Green
 } catch {
     Write-Warning "INSTALL STOPPED: $($_.Exception.Message)"
     exit 1
