@@ -6,6 +6,10 @@ on:
       - 'onboard/**'
       - 'firmware/tests/test_camera_color_startup.py'
       - '.github/workflows/onboard-firmware.yml'
+  pull_request:
+    paths:
+      - 'onboard/**'
+      - '.github/workflows/onboard-firmware.yml'
   workflow_dispatch:
 
 jobs:
