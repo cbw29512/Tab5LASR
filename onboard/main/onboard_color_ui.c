@@ -3,11 +3,10 @@
 #include <stdio.h>
 
 static const char *TAG = "lasr_color_ui";
-/* Photo evidence: vivid green/cyan image is consistent with RGB565 byte-order confusion.
- * Color 1 was closest to the real scene according to the user; a second observer
- * reported a remaining yellow cast. Keep Color 1 as baseline until calibrated.
- * This is a provisional display setting until verified against another photo. */
-static onboard_color_mode_t g_mode = ONBOARD_COLOR_ORIGINAL;
+/* Physical comparison: Color 2 (red/blue swap) looks closest to normal.
+ * Use as the display-only reboot baseline; source CSI frames and laser
+ * detection are not corrected by this preview setting. */
+static onboard_color_mode_t g_mode = ONBOARD_COLOR_SWAP_RED_BLUE;
 static lv_obj_t *g_button_label;
 
 onboard_color_mode_t onboard_color_ui_mode(void) {
