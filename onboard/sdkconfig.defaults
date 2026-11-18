@@ -24,3 +24,7 @@ CONFIG_FATFS_LFN_HEAP=y
 # Keep actionable errors and warnings; trim nonessential verbose logs for factory 1MiB size gate.
 CONFIG_LOG_DEFAULT_LEVEL_WARN=y
 CONFIG_LOG_MAXIMUM_EQUALS_DEFAULT=y
+
+# RISC-V ISA compiler option (-msave-restore) documented to shrink code.
+# Verify camera FPS and stack on actual battery hardware before release.
+CONFIG_COMPILER_SAVE_RESTORE_LIBCALLS=y
