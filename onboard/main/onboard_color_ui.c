@@ -3,11 +3,11 @@
 #include <stdio.h>
 
 static const char *TAG = "lasr_color_ui";
-/* Physical camera tests: the user selected Color 1 as closest to the
- * real scene. Color 3 was a provisional byte-order diagnostic, NOT an
- * approved correction; defaulting to it after reboot causes regression.
- * The other modes remain available for display-only calibration. */
-static onboard_color_mode_t g_mode = ONBOARD_COLOR_ORIGINAL;
+/* Physical comparison: Color 2 (red/blue swap) is closest to the real
+ * scene. Keep it as the reboot baseline, not as a sensor calibration.
+ * The four modes remain available to test the LCD preview; never apply
+ * these display corrections to source camera frames for laser detection. */
+static onboard_color_mode_t g_mode = ONBOARD_COLOR_SWAP_RED_BLUE;
 static lv_obj_t *g_button_label;
 
 onboard_color_mode_t onboard_color_ui_mode(void) {
