@@ -6,8 +6,8 @@ param(
 $ErrorActionPreference = 'Stop'
 try {
     $repository = "cbw29512/Tab5LASR"
-    $runId = 44208272748
-    $commit = "18edd60cb5e43b0d09f3af54a3445597f88a8c60"
+    $runId = 44208623788
+    $commit = "d2946decd4aa8080612b69271b6998c34478f0de"
     $artifact = "tab5lasr-onboard-$commit"
     $project = Split-Path -Parent $PSScriptRoot
     $folder = Join-Path $project "onboard-color-test"
