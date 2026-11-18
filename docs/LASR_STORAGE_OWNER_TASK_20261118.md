@@ -78,3 +78,9 @@ References: `docs/LASR_MICROSD_SESSION_STORAGE_CONTRACT.md` and `docs/LASR_SESSI
 - User-facing pulse thresholds, auto target recognition, camera bright-blob thresholds, pulse duration and IR/visible SIRT compatibility are **not asserted**. They require measured frames; source code does not invent working sensor calibration.
 - `onboard/tests/test_lasr_laser_pulse.c` validates synthetic startup-lit rejection, one-shot-per-pulse, flicker rejection, rearm, dropped-frame reset, nonmonotonic timestamps and invalid coordinates.
 - This code, like the writer task, is **compiled but not started** in current firmware.
+
+## File integrity hardening
+
+- `lasr_session_fs.c` now **re-opens and compares every byte** of `shots.csv` with `shots.pending` after finalization rather than accepting equal file sizes and row counts alone.
+- `session.json` and `target.json` are also read back and compared with the expected bytes after write/close; any readback mismatch leaves the writer in `UNSAVED` and preserves `shots.pending`.
+- FAT filename rename is not power-fail atomic. A byte-for-byte match immediately after writing does not guarantee survival of later card removal or power loss; physical pull tests and a journal recovery UI are still mandatory.
