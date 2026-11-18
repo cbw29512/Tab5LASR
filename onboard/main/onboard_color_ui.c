@@ -3,7 +3,10 @@
 #include <stdio.h>
 
 static const char *TAG = "lasr_color_ui";
-static onboard_color_mode_t g_mode = ONBOARD_COLOR_ORIGINAL;
+/* Photo evidence: vivid green/cyan image is consistent with RGB565 byte-order confusion.
+ * Begin with byte correction; the on-screen button can still test all four modes.
+ * This is a provisional display setting until verified against another photo. */
+static onboard_color_mode_t g_mode = ONBOARD_COLOR_SWAP_BYTES;
 static lv_obj_t *g_button_label;
 
 onboard_color_mode_t onboard_color_ui_mode(void) {
