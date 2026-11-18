@@ -1,0 +1,40 @@
+name: Compare LASR Web Firmware Linker Footprint
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/lasr-onboard-web-20261117]
+    paths: [.github/workflows/web-size-diff.yml]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch baseline + slim linked size reports (no builds or flash)
+        uses: actions/download-artifact@v4
+        with:
+          name: web-camera-2m-candidate-NOT-FLASH-APPROVED-c35bf3b6dff7a4ae3b821937ccbb0d7190699c05
+          run-id: 44219184773
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: baseline
+      - uses: actions/download-artifact@v4
+        with:
+          name: lasr-slim-size-reports-03711c024af05b9863b8b1bdfa361e109eb92592
+          run-id: 44225801920
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: slim
+      - name: Explain linked component changes, without guessing flash savings
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "BASELINE TOTAL APP BYTES: 1346992"
+          echo "SLIM TOTAL APP BYTES: 1266096"
+          echo "CURRENT DEVICE APP LIMIT: 1048576"
+          echo "=== BASELINE COMPONENTS ==="
+          head -n 100 baseline/lasr-size-components.txt
+          echo "=== SLIM COMPONENTS ==="
+          head -n 100 slim/slim-components.txt
+          echo "=== BEST CANDIDATES ==="
+          echo "Review changes to LVGL only. Do not remove battery, camera, sensor or ESP-Hosted stack blindly."
