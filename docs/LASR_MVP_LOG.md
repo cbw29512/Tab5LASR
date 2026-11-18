@@ -66,3 +66,12 @@ Local browser interaction tests and syntax checks are recorded in the PR descrip
 - Power loss, card removal/full/corrupt card, offline running, camera+SD concurrent load and **visible UNSAVED warnings** are mandatory tests.
 - Camera video recording is explicitly *not* part of v1; investigate later after measured performance and storage throughput.
 - Detailed contract: [LASR_MICROSD_SESSION_STORAGE_CONTRACT.md](LASR_MICROSD_SESSION_STORAGE_CONTRACT.md).
+
+## Wi-Fi and USB-C transfer request (2026-11-18)
+
+- User wants completed **microSD session files moved/copied to a laptop via Wi-Fi OR USB-C cable**, without removing the card. Copy is default; originals remain on the Tab5.
+- Hardware supports both in principle: onboard C6 Wi-Fi, Tab5 USB-C OTG, Espressif TinyUSB SD/MMC MSC support for ESP32-P4. Neither path is **implemented or validated on the current LASR firmware**.
+- Wi-Fi target: local authenticated session list with CSV/ZIP download, no cloud/Internet. Existing ESP-Hosted/web firmware size + C6 compatibility blocker remains; smaller download-only firmware is an investigation, not a proven fix.
+- USB-C target: explicit transfer mode that finalizes session, unmounts FAT from Tab5, exports SD through USB MSC; Windows eject required before Tab5 remounts. Never concurrently write SD from Windows and Tab5.
+- Require visible transfer state, file verification, no silent formatting, no automatic deletion, no power or firmware safety regressions.
+- Implementation/safety contract: [LASR_SESSION_TRANSFER_CONTRACT.md](LASR_SESSION_TRANSFER_CONTRACT.md).
