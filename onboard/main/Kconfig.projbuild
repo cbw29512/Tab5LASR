@@ -1,0 +1,11 @@
+menu "Tab5 LASR experimental diagnostics"
+    config LASR_CSI_DIAGNOSTIC
+        bool "Read-only raw CSI laser candidate probe (UNVERIFIED)"
+        default n
+        help
+            Off by default to preserve proven camera, color, and battery behavior.
+            If explicitly enabled for an engineering build, captures the first
+            frame as a reference and logs candidate flashes without creating
+            shots, scores, or microSD writes. Requires physical SIRT and dark
+            target calibration before any results may be trusted.
+endmenu

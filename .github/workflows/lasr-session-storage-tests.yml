@@ -5,6 +5,10 @@ on:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_recorder_*'
       - 'onboard/main/lasr_laser_pulse.*'
+      - 'onboard/main/lasr_raw_pixel.*'
+      - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_laser_pipeline.*'
+      - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
@@ -13,6 +17,10 @@ on:
       - 'onboard/main/lasr_session_*'
       - 'onboard/main/lasr_recorder_*'
       - 'onboard/main/lasr_laser_pulse.*'
+      - 'onboard/main/lasr_raw_pixel.*'
+      - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_laser_pipeline.*'
+      - 'onboard/main/lasr_csi_*'
       - 'onboard/main/lasr_transfer_guard.*'
       - 'onboard/tests/test_lasr_*'
       - '.github/workflows/lasr-session-storage-tests.yml'
@@ -50,3 +58,13 @@ jobs:
             -Ionboard/main onboard/main/lasr_laser_pulse.c \
             onboard/tests/test_lasr_laser_pulse.c -lm -o /tmp/lasr_pulse
           /tmp/lasr_pulse
+      - name: Raw CSI format, brightness and pulse tests (synthetic only)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_raw_pixel.c onboard/main/lasr_laser_blob.c \
+            onboard/main/lasr_laser_pipeline.c onboard/main/lasr_laser_pulse.c \
+            onboard/main/lasr_csi_format.c \
+            onboard/tests/test_lasr_laser_blob.c -lm -o /tmp/lasr_blob
+          /tmp/lasr_blob

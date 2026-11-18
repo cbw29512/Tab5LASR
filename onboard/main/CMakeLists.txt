@@ -7,6 +7,9 @@ idf_component_register(
     # Compiled but NOT started from app_main; software-only review gate.
     "lasr_session_fs.c" "lasr_session_store.c" "lasr_transfer_guard.c" "lasr_sd_device.c"
     "lasr_recorder_core.c" "lasr_recorder_task.c" "lasr_laser_pulse.c"
+    # Raw camera scanner + read-only opt-in CSI diagnostic, disabled by default.
+    "lasr_raw_pixel.c" "lasr_laser_blob.c" "lasr_laser_pipeline.c"
+    "lasr_csi_format.c" "lasr_csi_probe.c"
   INCLUDE_DIRS "."
   REQUIRES esp_driver_ppa fatfs sdmmc
 )
