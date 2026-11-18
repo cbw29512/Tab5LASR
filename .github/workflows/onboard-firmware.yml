@@ -28,6 +28,7 @@ jobs:
             -o /tmp/onboard_battery_test
           /tmp/onboard_battery_test
           python -m unittest discover -s firmware/tests -p 'test_partition_gate.py' -v
+          python -m unittest discover -s firmware/tests -p 'test_camera_color_startup.py' -v
 
   firmware-build:
     runs-on: ubuntu-latest
