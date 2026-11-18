@@ -4,14 +4,36 @@
 
 ## Verified image / backup
 
-- Image: `tab5lasr_onboard.bin`, **946,208 bytes**; original 1 MiB factory app (1,048,576 B) at **0x10000**
-- CI run [44193728872](https://github.com/cbw29512/Tab5LASR/actions/runs/44193728872), successful, commit `ae6f68346302e3ba306b63015d89ccc362ec3eac`
-- [Download artifact](https://github.com/cbw29512/Tab5LASR/actions/runs/44193728872/artifacts/14377144105), name `tab5lasr-onboard-ae6f68346302e3ba306b63015d89ccc362ec3eac`
+- Image: `tab5lasr_onboard.bin`, **946,240 bytes**; original 1 MiB factory app (1,048,576 B) at **0x10000**
+- CI run [44206614851](https://github.com/cbw29512/Tab5LASR/actions/runs/44206614851), successful, commit `148ed1a029396604c4c2fa91b7bb73063556e536`
+- [Download artifact](https://github.com/cbw29512/Tab5LASR/actions/runs/44206614851/artifacts/14384371506), name `tab5lasr-onboard-148ed1a029396604c4c2fa91b7bb73063556e536`
 - Camera driver: direct Espressif 1.3.3 BSP `bsp_camera_start` + `esp_video` / V4L2 + PPA RGB565 preview
 - The Tab5 source documentation says SC2356; current official BSP driver config is `CONFIG_CAMERA_SC202CS=y`. **Sensor success is not yet physically verified.**
 - Private verified recovery release: `cbw29512/Tab5DiceRecovery` / `tab5-dice-readback-20261117-173241`
 - Full flash readback SHA-256: `52545123E6C20C4B139F290B64E4C70701C3618616D9A4149D444039CE7A3C01`
 - Power: factory power-off P4 LOW, IP2326 charger config and INA226 telemetry, guarded two-tap 30-second recovery UI ported. **Battery-only operation remains physically unverified.**
+
+## Built-in camera 180-degree correction
+
+User's first physical flash produced a live **upside-down** picture. In `onboard/main/onboard_ppa.c`, only the picture's rotation was corrected by +180 degrees, preserving screen/touch controls and all battery modules. The corrected CI build is **946,240 bytes**, ESP32-P4 v1.x compatible, 1 MiB factory partition safe.
+
+**Recommended one-command installation** (PowerShell 5.1, project already cloned and permanent recovery verified):
+
+```powershell
+$ErrorActionPreference = 'Stop'
+try {
+    $project = Join-Path $HOME 'Tab5LASR'
+    & git -C $project pull --ff-only
+    if ($LASTEXITCODE -ne 0) { throw 'Could not update project' }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
+        (Join-Path $project 'tools\INSTALL_ONBOARD_ROTATE180.ps1') -Port COM5
+    if ($LASTEXITCODE -ne 0) { throw 'Camera rotation update did not complete' }
+    Write-Host 'ONBOARD CAMERA 180-DEGREE FIX INSTALLED' -ForegroundColor Green
+}
+catch { Write-Warning "STOP: $($_.Exception.Message)" }
+```
+
+The helper refuses to flash unless GitHub confirms the exact corrected run succeeded and the original `FLASH_CAMERA_ONLY.ps1` passes all backup/partition/image/revision checks. No bootloader or partition sectors are written. Do not use the original upside-down artifact for this revision.
 
 ## Windows PowerShell 5.1 installation
 
@@ -30,9 +52,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Project update failed" }
 
     New-Item -ItemType Directory -Force -Path $out | Out-Null
-    & gh run download 44193728872 `
+    & gh run download 44206614851 `
         --repo cbw29512/Tab5LASR `
-        --name "tab5lasr-onboard-ae6f68346302e3ba306b63015d89ccc362ec3eac" `
+        --name "tab5lasr-onboard-148ed1a029396604c4c2fa91b7bb73063556e536" `
         --dir $out
     if ($LASTEXITCODE -ne 0) { throw "Onboard camera firmware download failed" }
 
