@@ -19,7 +19,10 @@ jobs:
           cat onboard/sdkconfig.web_probe >> onboard/sdkconfig.defaults
           cat onboard/sdkconfig.partition_2m_probe >> onboard/sdkconfig.defaults
           cat onboard/sdkconfig.lvgl_slim_probe >> onboard/sdkconfig.defaults
-          grep -Fq CONFIG_LV_CONF_MINIMAL=y onboard/sdkconfig.defaults
+          grep -Fq CONFIG_LV_USE_BUTTON=y onboard/sdkconfig.defaults
+          if grep -Fq CONFIG_LV_CONF_MINIMAL=y onboard/sdkconfig.defaults; then
+            echo 'Retired LVGL minimal option is prohibited'; exit 1
+          fi
       - name: Compile full camera/battery/Wi-Fi with slim LVGL
         uses: espressif/esp-idf-ci-action@v1
         with:
