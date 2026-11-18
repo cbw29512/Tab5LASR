@@ -20,7 +20,9 @@ bool onboard_ppa_init(uint32_t width, uint32_t height,
     }
     g_width = width; g_height = height;
     g_swap = false;
-    g_rotation = PPA_SRM_ROTATION_ANGLE_270;
+    // User-confirmed: initial onboard preview was upside down.
+    // Rotate the camera pixels a further 180 degrees; do not rotate LVGL.
+    g_rotation = PPA_SRM_ROTATION_ANGLE_90;
     if (pixel_format == V4L2_PIX_FMT_RGB565X) {
         g_input_mode = PPA_SRM_COLOR_MODE_RGB565;
         g_swap = true;
@@ -28,7 +30,7 @@ bool onboard_ppa_init(uint32_t width, uint32_t height,
         g_input_mode = PPA_SRM_COLOR_MODE_RGB565;
     } else if (pixel_format == V4L2_PIX_FMT_UYVY) {
         g_input_mode = PPA_SRM_COLOR_MODE_YUV422_UYVY;
-        g_rotation = PPA_SRM_ROTATION_ANGLE_0; // Espressif's default UYVY path
+        g_rotation = PPA_SRM_ROTATION_ANGLE_180; // Correct inverted UYVY preview
     } else {
         ESP_LOGE(TAG, "Unsupported onboard pixel format 0x%08lx",
                  (unsigned long)pixel_format);
@@ -55,7 +57,7 @@ bool onboard_ppa_init(uint32_t width, uint32_t height,
         return false;
     }
     *out_w = g_out_w; *out_h = g_out_h;
-    ESP_LOGI(TAG, "PPA preview %lux%lu from %lux%lu",
+    ESP_LOGI(TAG, "PPA preview %lux%lu from %lux%lu (rotation corrected +180 degrees)",
              (unsigned long)g_out_w, (unsigned long)g_out_h,
              (unsigned long)width, (unsigned long)height);
     return true;
