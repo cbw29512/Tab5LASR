@@ -5,6 +5,7 @@ on:
       - 'onboard/**'
       - '.github/workflows/lasr-hardware-diagnostic-build.yml'
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
+      - 'tools/PREPARE_LASR_SD_TEST.ps1'
   workflow_dispatch:
 
 jobs:
@@ -70,10 +71,16 @@ jobs:
         run: |
           $tokens = $null
           $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1', [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | Format-Table -AutoSize
-            throw 'PowerShell 5.1 syntax parser rejected the diagnostic preflight script'
+          foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
+                              'tools/PREPARE_LASR_SD_TEST.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-Table -AutoSize
+              throw "PowerShell 5.1 parser rejected $path"
+            }
+            Write-Host "PASS: PowerShell 5.1 syntax $path"
           }
-          Write-Host 'PowerShell 5.1 AST parsing passed. No device connected or flashed.'
+          Write-Host 'No device connected or flashed.'
