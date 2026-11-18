@@ -33,3 +33,28 @@ export function formatNumber(value, suffix = "") {
   return typeof value === "number" && Number.isFinite(value)
     ? `${value.toFixed(1)}${suffix}` : "—";
 }
+
+// A long-running MJPEG <img> can fail before emitting an onload event.
+// Retry only when the device reports a usable camera and C6 connection;
+// throttle retries so an offline hotspot cannot trigger a request storm.
+export function shouldRetryStream(status, imageLoaded, elapsedMs, retryDelayMs = 5000) {
+  try {
+    return !imageLoaded && Boolean(status) &&
+      (status.state === "live" || status.state === "stale") &&
+      status.wifi_state === "connected" &&
+      Number.isFinite(elapsedMs) && elapsedMs >= retryDelayMs;
+  } catch {
+    return false;
+  }
+}
+
+export function viewerState(status, imageLoaded) {
+  try {
+    if (streamHealthy(status, imageLoaded)) return "live";
+    if (status?.state === "error") return "error";
+    if (status?.state === "stale") return "stale";
+    return "starting";
+  } catch {
+    return "error";
+  }
+}
