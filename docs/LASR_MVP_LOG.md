@@ -75,3 +75,9 @@ Local browser interaction tests and syntax checks are recorded in the PR descrip
 - USB-C target: explicit transfer mode that finalizes session, unmounts FAT from Tab5, exports SD through USB MSC; Windows eject required before Tab5 remounts. Never concurrently write SD from Windows and Tab5.
 - Require visible transfer state, file verification, no silent formatting, no automatic deletion, no power or firmware safety regressions.
 - Implementation/safety contract: [LASR_SESSION_TRANSFER_CONTRACT.md](LASR_SESSION_TRANSFER_CONTRACT.md).
+
+## Embedded storage implementation started (2026-11-18)
+
+- [Firmware PR #11](https://github.com/cbw29512/Tab5LASR/pull/11) now contains portable C source for recoverable shot-session journaling, verified CSV/JSON files, exclusive USB media ownership states, and explicit **non-formatting** Tab5 SDMMC adapter using BSP v1.3.3.
+- [Storage CI run 44314432306](https://github.com/cbw29512/Tab5LASR/actions/runs/44314432306) passed; ESP32-P4 application build/1 MiB gate in [run 44314432151](https://github.com/cbw29512/Tab5LASR/actions/runs/44314432151) requires its own result.
+- **No physical microSD recording yet**; code is compiled but not started or connected to laser events. Do not claim USB/Wi-Fi transfers are live. No flash operations have occurred.
