@@ -11,9 +11,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from audit_factory_expansion import (
-    END, KNOWN_DICE_SHA256, REGION_BYTES, START, read_verified_dice_backup
-)
+if __package__:
+    from .audit_factory_expansion import END, REGION_BYTES, START, read_verified_dice_backup
+else:
+    from audit_factory_expansion import END, REGION_BYTES, START, read_verified_dice_backup
 
 LOG = logging.getLogger("tab5_flash_compare")
 BLOCK_BYTES = 0x10000
