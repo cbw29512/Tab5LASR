@@ -22,6 +22,7 @@ jobs:
           cat onboard/sdkconfig.lto_probe >> onboard/sdkconfig.defaults
           grep -Fq CONFIG_COMPILER_LTO_LINKTIME=y onboard/sdkconfig.defaults
           grep -Fq CONFIG_LV_USE_BUTTON=y onboard/sdkconfig.defaults
+          grep -Fq CONFIG_LV_BUILD_EXAMPLES=n onboard/sdkconfig.defaults
       - name: Build optimized camera Wi-Fi and battery firmware
         uses: espressif/esp-idf-ci-action@v1
         with:
