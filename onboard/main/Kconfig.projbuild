@@ -8,6 +8,15 @@ menu "Tab5 LASR experimental diagnostics"
             frame as a reference and logs candidate flashes without creating
             shots, scores, or microSD writes. Requires physical SIRT and dark
             target calibration before any results may be trusted.
+    config LASR_COMBINED_DIAGNOSTIC
+        bool "Run isolated microSD smoke while raw CSI camera streams (review only)"
+        default n
+        depends on !LASR_SD_SMOKE_ON_BOOT
+        help
+            Never enabled in the normal camera image. Starts a separate
+            no-format SD synthetic-session task after four physical CSI frames.
+            Camera capture, preview, color and battery remain active. Laser
+            candidate logs are UNSCORED and never persisted as live shots.
     config LASR_SD_SMOKE_ON_BOOT
         bool "One-time microSD write/readback test at boot (UNTESTED hardware)"
         default n
