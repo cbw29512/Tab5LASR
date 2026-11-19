@@ -93,6 +93,23 @@ int main(void) {
 
     memset(current,0xff,sizeof(current));
     assert(lasr_blob_scan(&a,&b,&config,&found)&&!found.visible);
+    // Combined hardware probe: a 3x3 pulse must survive all three
+    // coarse-grid phases, and the dense neighborhood must recover center.
+    lasr_blob_config_t fast=cfg();
+    fast.step=3;
+    for (uint32_t phase=0;phase<3;++phase) {
+        memset(current,0,sizeof(current));
+        spot(current,15+phase,21+phase);
+        assert(lasr_blob_scan(&a,&b,&fast,&found));
+        assert(found.visible && found.cluster>=3);
+        assert(fabsf(found.x_norm-(16.5f+phase)/W)<.02f);
+        assert(fabsf(found.y_norm-(22.5f+phase)/H)<.02f);
+    }
+    memset(current,0,sizeof(current));
+    point(current,18,25,false);
+    assert(lasr_blob_scan(&a,&b,&fast,&found)&&!found.visible);
+    memset(current,0xff,sizeof(current));
+    assert(lasr_blob_scan(&a,&b,&fast,&found)&&!found.visible);
     // UYVY luma at byte +1; deliberate RGB565X byte order handling.
     memset(current,0,sizeof(current));
     current[5*STRIDE+2*6]=0x80;current[5*STRIDE+2*6+1]=200;
