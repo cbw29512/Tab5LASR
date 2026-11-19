@@ -25,7 +25,6 @@ onboard_camera_status_t g_onboard_status = {.state = ONBOARD_BOOT};
 static bool s_csi_probe_started;
 #endif
 
-
 static bool capture_frames(int fd, capture_buf_t *buffers) {
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     if (ioctl(fd, VIDIOC_STREAMON, &type) < 0) {
@@ -97,7 +96,6 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
     if (ioctl(fd, VIDIOC_STREAMOFF, &type) < 0) ESP_LOGE(TAG, "STREAMOFF failed");
     return false;
 }
-
 bool onboard_camera_run(void) {
     g_onboard_status.state = ONBOARD_CAMERA_INIT;
     esp_err_t err = bsp_camera_start(NULL);
