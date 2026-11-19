@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [sd-smoke, raw-csi, combined]
+        mode: [sd-smoke, raw-csi, combined, usb-preview]
     steps:
       - uses: actions/checkout@v4
       - name: Opt in to exactly one read-only / controlled diagnostic
@@ -31,6 +31,11 @@ jobs:
               printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             raw-csi)
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
+            usb-preview)
+              # JPEG snapshots on the EXISTING USB Serial/JTAG COM port.
+              # Exclude SD smoke and combined storage to retain strict 1 MiB size.
+              sed -i '/^CONFIG_LV_FONT_MONTSERRAT_20=y$/d' onboard/sdkconfig.defaults
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_USB_PREVIEW_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=n\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_LV_FONT_MONTSERRAT_20=n\nCONFIG_LV_FONT_MONTSERRAT_14=y\n' >> onboard/sdkconfig.defaults ;;
             combined)
               # Separate review-only binary. Never enable on normal camera boot.
               # Remove the base default before selecting the smaller font.
@@ -53,6 +58,295 @@ jobs:
           if [ "${{ matrix.mode }}" = "sd-smoke" ] || [ "${{ matrix.mode }}" = "combined" ]; then
             grep -Eq '^#define CONFIG_FATFS_LFN_HEAP 1$' onboard/build/config/sdkconfig.h
             grep -Eq '^#define CONFIG_FATFS_MAX_LFN 255$' onboard/build/config/sdkconfig.h
+          fi
+          if [ "${{ matrix.mode }}" = "usb-preview" ]; then
+            grep -Eq '^#define CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC 1
+            grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_14 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_20 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: expensive font still enabled in combined test'; exit 1
+            fi
+            grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
+              echo 'STOP: SD-only path also enabled'; exit 1;
+            }
+          fi
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image-info.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "DIAGNOSTIC_PROFILE=${{ matrix.mode }} IMAGE_BYTES=$SIZE MAX=1048576"
+          test "$SIZE" -le 1048576 || { echo 'STOP: image over factory 1 MiB app partition'; exit 1; }
+      - name: Package REVIEW ONLY image and safety notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-review
+          cp onboard/build/tab5lasr_onboard.bin diagnostic-review/
+          cd diagnostic-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'MODE=%s\nFLASH=NO_AUTO_FLASH\nAPP_OFFSET=0x10000\nMAX_PARTITION=1048576\nPHYSICAL_HARDWARE_TEST=NOT_DONE\n' "${{ matrix.mode }}" > FLASH_POLICY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lasr-optin-${{ matrix.mode }}-${{ github.sha }}
+          path: diagnostic-review/
+          retention-days: 14
+          if-no-files-found: error
+
+  windows-powershell-51-preflight-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unexpected flash regions in synthetic diagnostic-upgrade tests
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/tests -p test_verify_installed_sd_upgrade.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only upgrade guard regression' }
+      - name: Verify diagnostic script parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
+                              'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/PREPARE_LASR_COMBINED_TEST.ps1',
+                              'tools/IDENTIFY_LASR_INSTALLED.ps1',
+                              'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-Table -AutoSize
+              throw "PowerShell 5.1 parser rejected $path"
+            }
+            Write-Host "PASS: PowerShell 5.1 syntax $path"
+          }
+          # PowerShell's case-insensitive automatic $Matches is a Hashtable.
+          # Reusing that name as an array crashed after a successful exact match.
+          $identifier = Get-Content -LiteralPath 'tools/IDENTIFY_LASR_INSTALLED.ps1' -Raw
+          if ([regex]::IsMatch($identifier, '(?i)\$matches\b')) {
+            throw 'Identifier must not overwrite PowerShell automatic Matches variable'
+          }
+          Write-Host 'No device connected or flashed.'
+      - name: Read-only SD verifier accepts fixture and rejects tampering
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'lasr-sd-card'
+          $path = Join-Path $root 'LASR\diagnostics\synthetic-session-A1\LASR\sessions\fake_shots'
+          New-Item -ItemType Directory -Force -Path $path | Out-Null
+          $rows = @('shot,elapsed_ms,split_ms,zone,score,x_norm,y_norm',
+                    '1,150,150,UNSCORED,0,0.250000,0.500000',
+                    '2,410,260,UNSCORED,0,0.750000,0.400000')
+          $csv = ($rows -join [char]10) + [char]10
+          $session = '{"schema_version":1,"session_id":"fake_shots","target_id":"synthetic_test","status":"complete","shot_count":2,"score_total":0,"elapsed_ms":410,"start_delay_ms":3000,"save_state":"saved"}'
+          $target = '{"schema_version":1,"target_id":"synthetic_test","calibration_revision":1}'
+          [IO.File]::WriteAllText((Join-Path $path 'shots.csv'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'shots.pending'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'session.json'), $session + [char]10)
+          [IO.File]::WriteAllText((Join-Path $path 'target.json'), $target + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -ne 0) { throw 'Valid synthetic SD fixture was rejected' }
+          [IO.File]::AppendAllText((Join-Path $path 'shots.csv'), 'TAMPER' + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
+          Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
+          # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
+          $global:LASTEXITCODE = 0
+ onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1
+            grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_14 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_20 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: expensive font still enabled in combined test'; exit 1
+            fi
+            grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
+              echo 'STOP: SD-only path also enabled'; exit 1;
+            }
+          fi
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image-info.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "DIAGNOSTIC_PROFILE=${{ matrix.mode }} IMAGE_BYTES=$SIZE MAX=1048576"
+          test "$SIZE" -le 1048576 || { echo 'STOP: image over factory 1 MiB app partition'; exit 1; }
+      - name: Package REVIEW ONLY image and safety notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-review
+          cp onboard/build/tab5lasr_onboard.bin diagnostic-review/
+          cd diagnostic-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'MODE=%s\nFLASH=NO_AUTO_FLASH\nAPP_OFFSET=0x10000\nMAX_PARTITION=1048576\nPHYSICAL_HARDWARE_TEST=NOT_DONE\n' "${{ matrix.mode }}" > FLASH_POLICY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lasr-optin-${{ matrix.mode }}-${{ github.sha }}
+          path: diagnostic-review/
+          retention-days: 14
+          if-no-files-found: error
+
+  windows-powershell-51-preflight-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unexpected flash regions in synthetic diagnostic-upgrade tests
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/tests -p test_verify_installed_sd_upgrade.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only upgrade guard regression' }
+      - name: Verify diagnostic script parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
+                              'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/PREPARE_LASR_COMBINED_TEST.ps1',
+                              'tools/IDENTIFY_LASR_INSTALLED.ps1',
+                              'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-Table -AutoSize
+              throw "PowerShell 5.1 parser rejected $path"
+            }
+            Write-Host "PASS: PowerShell 5.1 syntax $path"
+          }
+          # PowerShell's case-insensitive automatic $Matches is a Hashtable.
+          # Reusing that name as an array crashed after a successful exact match.
+          $identifier = Get-Content -LiteralPath 'tools/IDENTIFY_LASR_INSTALLED.ps1' -Raw
+          if ([regex]::IsMatch($identifier, '(?i)\$matches\b')) {
+            throw 'Identifier must not overwrite PowerShell automatic Matches variable'
+          }
+          Write-Host 'No device connected or flashed.'
+      - name: Read-only SD verifier accepts fixture and rejects tampering
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'lasr-sd-card'
+          $path = Join-Path $root 'LASR\diagnostics\synthetic-session-A1\LASR\sessions\fake_shots'
+          New-Item -ItemType Directory -Force -Path $path | Out-Null
+          $rows = @('shot,elapsed_ms,split_ms,zone,score,x_norm,y_norm',
+                    '1,150,150,UNSCORED,0,0.250000,0.500000',
+                    '2,410,260,UNSCORED,0,0.750000,0.400000')
+          $csv = ($rows -join [char]10) + [char]10
+          $session = '{"schema_version":1,"session_id":"fake_shots","target_id":"synthetic_test","status":"complete","shot_count":2,"score_total":0,"elapsed_ms":410,"start_delay_ms":3000,"save_state":"saved"}'
+          $target = '{"schema_version":1,"target_id":"synthetic_test","calibration_revision":1}'
+          [IO.File]::WriteAllText((Join-Path $path 'shots.csv'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'shots.pending'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'session.json'), $session + [char]10)
+          [IO.File]::WriteAllText((Join-Path $path 'target.json'), $target + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -ne 0) { throw 'Valid synthetic SD fixture was rejected' }
+          [IO.File]::AppendAllText((Join-Path $path 'shots.csv'), 'TAMPER' + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
+          Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
+          # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
+          $global:LASTEXITCODE = 0
+ onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1
+            grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_14 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_20 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: expensive font still enabled in combined test'; exit 1
+            fi
+            grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
+              echo 'STOP: SD-only path also enabled'; exit 1;
+            }
+          fi
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image-info.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "DIAGNOSTIC_PROFILE=${{ matrix.mode }} IMAGE_BYTES=$SIZE MAX=1048576"
+          test "$SIZE" -le 1048576 || { echo 'STOP: image over factory 1 MiB app partition'; exit 1; }
+      - name: Package REVIEW ONLY image and safety notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-review
+          cp onboard/build/tab5lasr_onboard.bin diagnostic-review/
+          cd diagnostic-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'MODE=%s\nFLASH=NO_AUTO_FLASH\nAPP_OFFSET=0x10000\nMAX_PARTITION=1048576\nPHYSICAL_HARDWARE_TEST=NOT_DONE\n' "${{ matrix.mode }}" > FLASH_POLICY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lasr-optin-${{ matrix.mode }}-${{ github.sha }}
+          path: diagnostic-review/
+          retention-days: 14
+          if-no-files-found: error
+
+  windows-powershell-51-preflight-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unexpected flash regions in synthetic diagnostic-upgrade tests
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/tests -p test_verify_installed_sd_upgrade.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only upgrade guard regression' }
+      - name: Verify diagnostic script parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
+                              'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/PREPARE_LASR_COMBINED_TEST.ps1',
+                              'tools/IDENTIFY_LASR_INSTALLED.ps1',
+                              'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-Table -AutoSize
+              throw "PowerShell 5.1 parser rejected $path"
+            }
+            Write-Host "PASS: PowerShell 5.1 syntax $path"
+          }
+          # PowerShell's case-insensitive automatic $Matches is a Hashtable.
+          # Reusing that name as an array crashed after a successful exact match.
+          $identifier = Get-Content -LiteralPath 'tools/IDENTIFY_LASR_INSTALLED.ps1' -Raw
+          if ([regex]::IsMatch($identifier, '(?i)\$matches\b')) {
+            throw 'Identifier must not overwrite PowerShell automatic Matches variable'
+          }
+          Write-Host 'No device connected or flashed.'
+      - name: Read-only SD verifier accepts fixture and rejects tampering
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'lasr-sd-card'
+          $path = Join-Path $root 'LASR\diagnostics\synthetic-session-A1\LASR\sessions\fake_shots'
+          New-Item -ItemType Directory -Force -Path $path | Out-Null
+          $rows = @('shot,elapsed_ms,split_ms,zone,score,x_norm,y_norm',
+                    '1,150,150,UNSCORED,0,0.250000,0.500000',
+                    '2,410,260,UNSCORED,0,0.750000,0.400000')
+          $csv = ($rows -join [char]10) + [char]10
+          $session = '{"schema_version":1,"session_id":"fake_shots","target_id":"synthetic_test","status":"complete","shot_count":2,"score_total":0,"elapsed_ms":410,"start_delay_ms":3000,"save_state":"saved"}'
+          $target = '{"schema_version":1,"target_id":"synthetic_test","calibration_revision":1}'
+          [IO.File]::WriteAllText((Join-Path $path 'shots.csv'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'shots.pending'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'session.json'), $session + [char]10)
+          [IO.File]::WriteAllText((Join-Path $path 'target.json'), $target + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -ne 0) { throw 'Valid synthetic SD fixture was rejected' }
+          [IO.File]::AppendAllText((Join-Path $path 'shots.csv'), 'TAMPER' + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
+          Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
+          # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
+          $global:LASTEXITCODE = 0
+ onboard/build/config/sdkconfig.h; then
+              echo 'STOP: USB preview cannot run combined SD smoke'; exit 1
+            fi
           fi
           if [ "${{ matrix.mode }}" = "combined" ]; then
             grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
