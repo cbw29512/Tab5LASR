@@ -7,6 +7,10 @@
 #include "esp_heap_caps.h"
 #include "esp_private/esp_cache_private.h"
 #include "lvgl.h"
+#include "sdkconfig.h"
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+#include "lasr_usb_preview.h"
+#endif
 
 static const char *TAG = "lasr_view";
 static lv_obj_t *g_canvas;
@@ -82,6 +86,13 @@ bool onboard_view_show(const void *frame_bytes, size_t length,
         }
     }
     if (ok) {
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+        // Subsample the SAME corrected, rotated LCD pixels before the
+        // canvas advances. The serial worker owns its independent copy.
+        lasr_usb_preview_offer(
+            (const uint16_t *)g_canvas_pixels[buffer_index],
+            g_width, g_height);
+#endif
         lv_canvas_set_buffer(g_canvas, g_canvas_pixels[buffer_index],
                              g_width, g_height, LV_COLOR_FORMAT_RGB565);
         lv_obj_center(g_canvas);
