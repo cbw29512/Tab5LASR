@@ -7,6 +7,8 @@ on:
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
       - 'tools/PREPARE_LASR_SD_TEST.ps1'
       - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
+      - 'tools/verify_installed_sd_upgrade.py'
+      - 'tools/tests/test_verify_installed_sd_upgrade.py'
   workflow_dispatch:
 
 jobs:
@@ -72,6 +74,11 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Reject unexpected flash regions in synthetic diagnostic-upgrade tests
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/tests -p test_verify_installed_sd_upgrade.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only upgrade guard regression' }
       - name: Verify diagnostic script parses under Windows PowerShell 5.1
         shell: powershell
         run: |
