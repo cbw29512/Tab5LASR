@@ -17,6 +17,17 @@ menu "Tab5 LASR experimental diagnostics"
             no-format SD synthetic-session task after four physical CSI frames.
             Camera capture, preview, color and battery remain active. Laser
             candidate logs are UNSCORED and never persisted as live shots.
+    config LASR_USB_PREVIEW_DIAGNOSTIC
+        bool "USB JPEG preview engineering test (no Wi-Fi or SD probe)"
+        default n
+        depends on !LASR_COMBINED_DIAGNOSTIC && !LASR_SD_SMOKE_ON_BOOT
+        help
+            Dedicated recovery-guarded P4 USB Serial/JTAG camera preview.
+            Uses JPEG hardware encoder on a bounded copy of display pixels,
+            never retains V4L2 DMA frame memory. Streams real camera JPEG
+            snapshots to a local browser via serial; no Wi-Fi, no scoring,
+            no recording. Do not ship as production or modify the C6.
+
     config LASR_SD_SMOKE_ON_BOOT
         bool "One-time microSD write/readback test at boot (UNTESTED hardware)"
         default n
