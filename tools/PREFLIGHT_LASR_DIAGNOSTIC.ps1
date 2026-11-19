@@ -41,7 +41,7 @@ try {
         $oldPolicy = Get-Content -LiteralPath $previousPolicy -Raw
         # Both previously installed SD-only and combined diagnostics can
         # be verified against the complete original camera flash backup.
-        if ($oldPolicy -notmatch '(?m)^MODE=(sd-smoke|combined)\r?$' -or
+        if ($oldPolicy -notmatch '(?m)^MODE=(sd-smoke|combined|usb-preview)\r?$' -or
             $oldPolicy -notmatch '(?m)^APP_OFFSET=0x10000\r?$' -or
             $oldPolicy -notmatch '(?m)^MAX_PARTITION=1048576\r?$' -or
             $oldPolicy -notmatch '(?m)^FLASH=NO_AUTO_FLASH\r?$') {
