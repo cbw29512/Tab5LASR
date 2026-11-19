@@ -28,6 +28,26 @@
     aim its built-in camera at a laser-free target for the initial reference, then fire your unloaded SIRT trainer.
     Close any other serial monitor before connecting. Use desktop Chrome or Edge.
   </div>
+  <section class="panel live-camera-panel" aria-label="Real Tab5 CSI camera image">
+    <div class="panel-heading"><h2>Camera view from your Tab5</h2>
+      <span id="camera-meta">Waiting for real Tab5 camera frames over USB</span>
+    </div>
+    <div class="live-camera-stage" id="live-camera-stage">
+      <img id="usb-camera" alt="Actual CSI camera JPEG transmitted from Tab5" hidden>
+      <div id="camera-hit-markers" aria-hidden="true"></div>
+      <div id="camera-waiting">No camera image received yet. USB preview requires the separate reviewed camera firmware.</div>
+    </div>
+    <div class="preview-options">
+      <label for="orientation">Candidate overlay direction</label>
+      <select id="orientation">
+        <option value="flip180" selected>Rotate raw coordinates 180° (UYVY preview)</option>
+        <option value="raw">No rotation</option>
+        <option value="turn90">Rotate 90°</option>
+        <option value="turn270">Rotate 270°</option>
+      </select>
+    </div>
+    <p class="fine">Actual low-resolution color frames from Tab5 USB. The yellow dots represent raw uncalibrated detector coordinates, not scored hits; orientation needs physical verification.</p>
+  </section>
   <section class="columns">
     <div class="panel">
       <div class="panel-heading">
