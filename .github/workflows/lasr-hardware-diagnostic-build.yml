@@ -32,7 +32,7 @@ jobs:
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
             combined)
               # Separate review-only binary. Never enable on normal camera boot.
-              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_LV_FONT_MONTSERRAT_20=n\nCONFIG_LV_FONT_MONTSERRAT_14=y\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
           esac
       - name: Compile opt-in ESP32-P4 firmware with pinned project config
@@ -54,6 +54,10 @@ jobs:
           if [ "${{ matrix.mode }}" = "combined" ]; then
             grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
             grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_14 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_20 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: expensive font still enabled in combined test'; exit 1
+            fi
             grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
               echo 'STOP: SD-only path also enabled'; exit 1;
             }
