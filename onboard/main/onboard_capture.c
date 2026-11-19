@@ -4,6 +4,9 @@
 #include "onboard_view.h"
 #include "onboard_capture_buffers.h"
 #include "sdkconfig.h"
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+#include "lasr_concurrent_sd.h"
+#endif
 #if CONFIG_LASR_CSI_DIAGNOSTIC
 #include "lasr_csi_probe.h"
 #endif
@@ -33,6 +36,9 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
     int64_t sampled = began;
     uint32_t prev_rx = 0, prev_draw = 0;
     g_onboard_status.state = ONBOARD_STREAMING;
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+    bool combined_probe_attempted = false;
+#endif
 #if CONFIG_LASR_CSI_DIAGNOSTIC
     bool warned_probe=false;
 #endif
@@ -71,6 +77,16 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
             ESP_LOGE(TAG, "VIDIOC_QBUF failed after preview");
             break;
         }
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+        // Only launch once the real camera is STREAMON and has delivered
+        // multiple frames. The SD task runs concurrently with this loop;
+        // it never writes from inside the capture callback.
+        if (!combined_probe_attempted && g_onboard_status.captured_frames >= 4U) {
+            combined_probe_attempted = true;
+            if (!lasr_concurrent_sd_start())
+                ESP_LOGE(TAG, "Concurrent camera+SD smoke task could not start");
+        }
+#endif
         const int64_t now = esp_timer_get_time();
         if (now - sampled >= 5000000) {
             ESP_LOGI(TAG, "MIPI CSI %lux%lu fourcc=0x%08lx capture=%.1f FPS preview=%.1f FPS errors=%lu",
