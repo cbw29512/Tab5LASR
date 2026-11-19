@@ -6,6 +6,9 @@ on:
       - '.github/workflows/lasr-hardware-diagnostic-build.yml'
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
       - 'tools/PREPARE_LASR_SD_TEST.ps1'
+      - 'tools/PREPARE_LASR_COMBINED_TEST.ps1'
+      - 'tools/PREPARE_LASR_USB_PREVIEW_TEST.ps1'
+      - 'tools/IDENTIFY_LASR_INSTALLED.ps1'
       - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
       - 'tools/verify_installed_sd_upgrade.py'
       - 'tools/tests/test_verify_installed_sd_upgrade.py'
@@ -17,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [sd-smoke, raw-csi]
+        mode: [sd-smoke, raw-csi, combined, usb-preview]
     steps:
       - uses: actions/checkout@v4
       - name: Opt in to exactly one read-only / controlled diagnostic
@@ -29,6 +32,15 @@ jobs:
               printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             raw-csi)
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
+            usb-preview)
+              # Separate USB camera JPEG profile; no SD task or Wi-Fi.
+              sed -i '/^CONFIG_LV_FONT_MONTSERRAT_20=y$/d' onboard/sdkconfig.defaults
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_USB_PREVIEW_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=n\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_LV_FONT_MONTSERRAT_20=n\nCONFIG_LV_FONT_MONTSERRAT_14=y\n' >> onboard/sdkconfig.defaults ;;
+            combined)
+              # Separate review-only binary. Never enable on normal camera boot.
+              # Remove the base default before selecting the smaller font.
+              sed -i '/^CONFIG_LV_FONT_MONTSERRAT_20=y$/d' onboard/sdkconfig.defaults
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_LV_FONT_MONTSERRAT_20=n\nCONFIG_LV_FONT_MONTSERRAT_14=y\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
           esac
       - name: Compile opt-in ESP32-P4 firmware with pinned project config
@@ -43,9 +55,27 @@ jobs:
           set -euo pipefail
           python -m pip install esptool==5.6.0
           # Keep FAT filenames and stack settings accountable in the built image.
-          if [ "${{ matrix.mode }}" = "sd-smoke" ]; then
+          if [ "${{ matrix.mode }}" = "sd-smoke" ] || [ "${{ matrix.mode }}" = "combined" ]; then
             grep -Eq '^#define CONFIG_FATFS_LFN_HEAP 1$' onboard/build/config/sdkconfig.h
             grep -Eq '^#define CONFIG_FATFS_MAX_LFN 255$' onboard/build/config/sdkconfig.h
+          fi
+          if [ "${{ matrix.mode }}" = "usb-preview" ]; then
+            grep -Eq '^#define CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: USB preview must not enable combined SD'; exit 1
+            fi
+          fi
+          if [ "${{ matrix.mode }}" = "combined" ]; then
+            grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_14 1$' onboard/build/config/sdkconfig.h
+            if grep -Eq '^#define CONFIG_LV_FONT_MONTSERRAT_20 1$' onboard/build/config/sdkconfig.h; then
+              echo 'STOP: expensive font still enabled in combined test'; exit 1
+            fi
+            grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
+              echo 'STOP: SD-only path also enabled'; exit 1;
+            }
           fi
           test -f onboard/build/tab5lasr_onboard.bin
           python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
@@ -86,6 +116,9 @@ jobs:
           $errors = $null
           foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
                               'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/PREPARE_LASR_COMBINED_TEST.ps1',
+                              'tools/PREPARE_LASR_USB_PREVIEW_TEST.ps1',
+                              'tools/IDENTIFY_LASR_INSTALLED.ps1',
                               'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
             $tokens = $null
             $errors = $null
@@ -96,6 +129,12 @@ jobs:
               throw "PowerShell 5.1 parser rejected $path"
             }
             Write-Host "PASS: PowerShell 5.1 syntax $path"
+          }
+          # PowerShell's case-insensitive automatic $Matches is a Hashtable.
+          # Reusing that name as an array crashed after a successful exact match.
+          $identifier = Get-Content -LiteralPath 'tools/IDENTIFY_LASR_INSTALLED.ps1' -Raw
+          if ([regex]::IsMatch($identifier, '(?i)\$matches\b')) {
+            throw 'Identifier must not overwrite PowerShell automatic Matches variable'
           }
           Write-Host 'No device connected or flashed.'
       - name: Read-only SD verifier accepts fixture and rejects tampering
@@ -122,3 +161,17 @@ jobs:
           Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
           # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
           $global:LASTEXITCODE = 0
+
+  usb-preview-wire-host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify USB camera frame checksum and bounded ASCII format
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -O2 \
+            onboard/main/lasr_usb_preview_wire.c \
+            onboard/tests/test_lasr_usb_preview_wire.c \
+            -o /tmp/lasr_usb_wire
+          /tmp/lasr_usb_wire

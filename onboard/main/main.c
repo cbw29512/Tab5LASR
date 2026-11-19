@@ -5,6 +5,9 @@
 #include "tab5_power_widget.h"
 #include "onboard_color_ui.h"
 #include "sdkconfig.h"
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+#include "lasr_usb_preview.h"
+#endif
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
 #include "lasr_sd_smoke.h"
 #include "lasr_sd_status_ui.h"
@@ -65,9 +68,15 @@ void app_main(void) {
         return;
     }
     tab5_power_widget_attach(lv_scr_act());
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC || CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+    // Physical comparison already selected Color 2 as the default.
+    // Omit the optional swatch/test button ONLY in the compact combined
+    // engineering image; onboard_view still applies the Color 2 transform.
+#else
     if (!onboard_color_ui_attach(lv_scr_act())) {
         ESP_LOGE(TAG, "Color diagnostic UI unavailable; original camera preview remains valid");
     }
+#endif
     bsp_display_unlock();
 
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
@@ -84,6 +93,14 @@ void app_main(void) {
         lasr_sd_status_ui_show(false);
     }
 #else
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+    ESP_LOGW(TAG, "OPT-IN CAMERA+SD concurrency test: NO real shot storage or scoring");
+#endif
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+    if (!lasr_usb_preview_start()) {
+        ESP_LOGE(TAG,"USB preview unavailable; camera remains local");
+    }
+#endif
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG, "Built-in camera failed; see CSI sensor/format errors");

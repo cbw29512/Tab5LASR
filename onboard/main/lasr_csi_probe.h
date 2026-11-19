@@ -9,3 +9,8 @@ bool lasr_csi_probe_begin(uint32_t width, uint32_t height,
 bool lasr_csi_probe_observe(const void *borrowed, size_t length,
                             uint64_t timestamp_us);
 void lasr_csi_probe_end(void);
+
+// Combined engineering build: scanner starts OFF for baseline camera FPS.
+// LVGL button toggles it while CSI runs; no SIRT events are saved.
+void lasr_csi_probe_set_scanning_enabled(bool enabled);
+bool lasr_csi_probe_scanning_enabled(void);

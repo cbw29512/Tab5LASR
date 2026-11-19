@@ -4,6 +4,9 @@
 #include "onboard_view.h"
 #include "onboard_capture_buffers.h"
 #include "sdkconfig.h"
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+#include "lasr_concurrent_sd.h"
+#endif
 #if CONFIG_LASR_CSI_DIAGNOSTIC
 #include "lasr_csi_probe.h"
 #endif
@@ -21,7 +24,6 @@ onboard_camera_status_t g_onboard_status = {.state = ONBOARD_BOOT};
 #if CONFIG_LASR_CSI_DIAGNOSTIC
 static bool s_csi_probe_started;
 #endif
-
 
 static bool capture_frames(int fd, capture_buf_t *buffers) {
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -71,6 +73,10 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
             ESP_LOGE(TAG, "VIDIOC_QBUF failed after preview");
             break;
         }
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+        // Only the combined task owns the atomic cross-task frame counter.
+        lasr_concurrent_sd_frame_returned();
+#endif
         const int64_t now = esp_timer_get_time();
         if (now - sampled >= 5000000) {
             ESP_LOGI(TAG, "MIPI CSI %lux%lu fourcc=0x%08lx capture=%.1f FPS preview=%.1f FPS errors=%lu",
@@ -88,7 +94,6 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
     if (ioctl(fd, VIDIOC_STREAMOFF, &type) < 0) ESP_LOGE(TAG, "STREAMOFF failed");
     return false;
 }
-
 bool onboard_camera_run(void) {
     g_onboard_status.state = ONBOARD_CAMERA_INIT;
     esp_err_t err = bsp_camera_start(NULL);

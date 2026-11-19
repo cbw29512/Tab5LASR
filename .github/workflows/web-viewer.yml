@@ -5,6 +5,11 @@ on:
     paths:
       - 'web/**'
       - '.github/workflows/web-viewer.yml'
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'tools/OPEN_LASR_USB_TEST.ps1'
+      - '.github/workflows/web-viewer.yml'
   workflow_dispatch:
 jobs:
   browser-contract:
@@ -18,6 +23,11 @@ jobs:
         run: |
           node --check web/model.js
           node --check web/app.js
+          node --check web/serial-model.js
+          node --check web/serial-plot.js
+          node --check web/serial-test.js
+          node --check web/serial-jpeg.js
+          node --check web/serial-preview.js
       - name: Test status schema, stale feed gating, and missing data
         run: node --test web/tests/*.test.mjs
       - name: Enforce same-origin-only camera feed and no fake video
@@ -29,3 +39,33 @@ jobs:
           if grep -Ei '<video|data:video|youtu|cloudflare|example.com' web/index.html; then
             echo 'Unexpected external media in offline-first viewer'; exit 1
           fi
+
+      - name: Validate USB serial viewer has no fake camera feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'navigator.serial.requestPort()' web/serial-test.js
+          grep -Fq 'UNVERIFIED candidate' web/serial-model.js
+          grep -Fq 'LASRJPEGV1' web/serial-jpeg.js
+          grep -Fq 'Camera images require the separate USB-preview firmware' web/serial-test.html
+          if grep -Ei 'fake.*shot|fake.*stream|data:image|mock.*camera' web/serial-test.html; then
+            echo 'USB serial test must not fabricate live camera or SIRT shots'; exit 1
+          fi
+
+
+  windows-launcher-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PowerShell 5.1 USB localhost launcher syntax
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            'tools/OPEN_LASR_USB_TEST.ps1', [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-Table -AutoSize
+            throw 'USB localhost launcher PowerShell parser failed'
+          }
+          Write-Host 'PASS: no device attached and no local server started'

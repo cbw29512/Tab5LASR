@@ -8,6 +8,10 @@
 #include <string.h>
 
 #define LASR_QUEUE_LENGTH 32U
+// FAT/VFS session writes overflowed a smaller SD diagnostic task on Tab5.
+// This task is created only when explicit live recording is initialized.
+// ESP-IDF xTaskCreate uses stack size in bytes, not FreeRTOS words.
+#define LASR_RECORDER_STACK_BYTES (24U * 1024U)
 static const char *TAG = "lasr_writer";
 static QueueHandle_t s_queue;
 static volatile int s_status = LASR_REC_IDLE;
@@ -49,7 +53,8 @@ bool lasr_recorder_task_init(void) {
     if (s_queue) return false;
     s_queue = xQueueCreate(LASR_QUEUE_LENGTH, sizeof(lasr_rec_message_t));
     if (!s_queue) { ESP_LOGE(TAG, "Unable to allocate bounded shot queue"); return false; }
-    if (xTaskCreate(writer_task, "lasr_sd_owner", 6144, NULL, 3, NULL) != pdPASS) {
+    if (xTaskCreate(writer_task, "lasr_sd_owner",
+                    LASR_RECORDER_STACK_BYTES, NULL, 3, NULL) != pdPASS) {
         ESP_LOGE(TAG, "Unable to create SD owner task");
         vQueueDelete(s_queue); s_queue = NULL; return false;
     }

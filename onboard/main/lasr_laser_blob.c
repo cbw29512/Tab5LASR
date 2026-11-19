@@ -8,17 +8,23 @@ static bool valid_config(const lasr_blob_config_t *c) {
         c->left>=0 && c->top>=0 && c->right<=1 && c->bottom<=1 &&
         c->right>c->left && c->bottom>c->top && c->step>=1 &&
         c->step<=8 && c->min_cluster>0 && c->radius_px>=c->step &&
+        c->radius_px<=64 &&
         c->min_luma>0 && c->min_delta>0 && c->max_candidates>0;
 }
 static bool candidate(const lasr_raw_frame_t *now,
                       const lasr_raw_frame_t *dark,
                       const lasr_blob_config_t *c,
                       uint32_t x, uint32_t y, uint8_t *delta) {
-    uint8_t a=0,b=0;
-    if (!lasr_raw_luma(now,x,y,&a) || !lasr_raw_luma(dark,x,y,&b))
-        return false;
-    *delta=a>b?(uint8_t)(a-b):0;
-    return a>=c->min_luma && *delta>=c->min_delta;
+    // lasr_blob_scan validated BOTH frames, including stride and length,
+    // and bounded this ROI before entering the scan loops. Avoid
+    // revalidating complete V4L2 frame metadata for every single pixel.
+    const uint8_t a = lasr_raw_luma_validated(now, x, y);
+    // Most pixels cannot qualify: avoid reading / decoding a second
+    // PSRAM frame unless the current pixel exceeds the bright threshold.
+    if (a < c->min_luma) return false;
+    const uint8_t background = lasr_raw_luma_validated(dark, x, y);
+    *delta = a > background ? (uint8_t)(a - background) : 0;
+    return *delta >= c->min_delta;
 }
 bool lasr_blob_scan(const lasr_raw_frame_t *now,
                     const lasr_raw_frame_t *dark,
@@ -46,13 +52,22 @@ bool lasr_blob_scan(const lasr_raw_frame_t *now,
     // A candidate must be a compact spot, not scattered bright changes.
     uint64_t sx=0,sy=0; uint32_t clustered=0;
     const uint64_t radius2=(uint64_t)cfg->radius_px*cfg->radius_px;
-    for (uint32_t y=y0;y<y1;y+=cfg->step) {
-        for (uint32_t x=x0;x<x1;x+=cfg->step) {
+    // Coarse ROI search may skip pixels for speed, but every detected
+    // candidate receives a DENSE local check. A small 3x3 SIRT spot must
+    // not lose its cluster merely because the coarse grid used step=2.
+    // Restrict the dense work to radius <=64 (never a second full-ROI scan).
+    const int32_t extent=(int32_t)cfg->radius_px;
+    for (int32_t iy=-extent;iy<=extent;++iy) {
+        const int32_t y=(int32_t)peak_y+iy;
+        if (y<(int32_t)y0 || y>=(int32_t)y1) continue;
+        for (int32_t ix=-extent;ix<=extent;++ix) {
+            const int32_t x=(int32_t)peak_x+ix;
+            if (x<(int32_t)x0 || x>=(int32_t)x1) continue;
             const int64_t dx=(int64_t)x-peak_x,dy=(int64_t)y-peak_y;
             if ((uint64_t)(dx*dx+dy*dy)>radius2) continue;
             uint8_t delta=0;
-            if (candidate(now,dark,cfg,x,y,&delta)) {
-                sx+=x;sy+=y;++clustered;
+            if (candidate(now,dark,cfg,(uint32_t)x,(uint32_t)y,&delta)) {
+                sx+=(uint32_t)x;sy+=(uint32_t)y;++clustered;
             }
         }
     }

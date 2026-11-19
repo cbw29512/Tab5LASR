@@ -19,7 +19,13 @@ bool lasr_laser_pipeline_step(lasr_laser_pipeline_t *p,
     if (!lasr_blob_scan(now,dark,&p->blob,&found))return false;
     ++p->scanned_frames;
     if (found.visible)++p->bright_frames;
-    // Debounce is source-neutral, and time starts at first qualifying frame.
-    return lasr_pulse_step(&p->pulse,capture_us,found.visible,
-                            found.x_norm,found.y_norm,out);
+    // A genuine camera frame gap is a valid scanned frame, but forces the
+    // universal pulse detector to re-arm from DARK. It must not be mislabeled
+    // as a CSI scanner failure or interpreted as a shot.
+    const uint64_t previous=p->pulse.last_frame_us;
+    const bool gap=previous && capture_us>previous &&
+        capture_us-previous>p->pulse.config.max_gap_us;
+    const bool pulse_ok=lasr_pulse_step(&p->pulse,capture_us,found.visible,
+                                       found.x_norm,found.y_norm,out);
+    return pulse_ok || (gap && p->pulse.last_frame_us==capture_us);
 }

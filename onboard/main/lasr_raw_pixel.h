@@ -19,3 +19,8 @@ typedef struct {
 bool lasr_raw_frame_valid(const lasr_raw_frame_t *frame);
 bool lasr_raw_luma(const lasr_raw_frame_t *frame,
                    uint32_t x, uint32_t y, uint8_t *out);
+
+// Hot-path decoder: caller MUST have validated the frame and pixel bounds.
+// The raw CSI blob scanner validates once per frame before many pixel reads.
+uint8_t lasr_raw_luma_validated(const lasr_raw_frame_t *frame,
+                                uint32_t x, uint32_t y);

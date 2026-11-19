@@ -53,6 +53,7 @@ int main(void) {
     uint8_t luma=0;
     lasr_raw_frame_t a=frame(current,LASR_RAW_RGB565_LE);
     assert(lasr_raw_luma(&a,16,22,&luma)&&luma==0);
+    assert(lasr_raw_luma_validated(&a,16,22)==luma);
     assert(!lasr_raw_luma(&a,W,1,&luma));
     a.length=H*STRIDE-1;assert(!lasr_raw_frame_valid(&a));
     a=frame(current,(lasr_raw_format_t)-1);assert(!lasr_raw_frame_valid(&a));
@@ -77,17 +78,50 @@ int main(void) {
     step(&p,7000,false);step(&p,8000,false);
     spot(current,15,21);
     step(&p,9000,false);step(&p,10000,true); // Re-arm after dark.
+
+    // A long interval is normal when camera capture stalls temporarily.
+    // Scanner reports the frame as processed, but discards the old pulse
+    // and requires fresh dark frames before detecting another hit.
+    memset(current,0,sizeof(current));
+    step(&p,40000,false); // 30ms exceeds the configured 10ms max gap.
+    spot(current,15,21);
+    step(&p,41000,false); // Cannot count a laser already visible after gap.
+    memset(current,0,sizeof(current));
+    step(&p,42000,false);step(&p,43000,false);
+    spot(current,15,21);
+    step(&p,44000,false);step(&p,45000,true);
+
     memset(current,0xff,sizeof(current));
     assert(lasr_blob_scan(&a,&b,&config,&found)&&!found.visible);
+    // Combined hardware probe: a 3x3 pulse must survive all three
+    // coarse-grid phases, and the dense neighborhood must recover center.
+    lasr_blob_config_t fast=cfg();
+    fast.step=3;
+    for (uint32_t phase=0;phase<3;++phase) {
+        memset(current,0,sizeof(current));
+        spot(current,15+phase,21+phase);
+        assert(lasr_blob_scan(&a,&b,&fast,&found));
+        assert(found.visible && found.cluster>=3);
+        assert(fabsf(found.x_norm-(16.5f+phase)/W)<.02f);
+        assert(fabsf(found.y_norm-(22.5f+phase)/H)<.02f);
+    }
+    memset(current,0,sizeof(current));
+    point(current,18,25,false);
+    assert(lasr_blob_scan(&a,&b,&fast,&found)&&!found.visible);
+    memset(current,0xff,sizeof(current));
+    assert(lasr_blob_scan(&a,&b,&fast,&found)&&!found.visible);
     // UYVY luma at byte +1; deliberate RGB565X byte order handling.
     memset(current,0,sizeof(current));
     current[5*STRIDE+2*6]=0x80;current[5*STRIDE+2*6+1]=200;
     a=frame(current,LASR_RAW_UYVY);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma==200);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     current[5*STRIDE+2*6]=0xf8;current[5*STRIDE+2*6+1]=0;
     a=frame(current,LASR_RAW_RGB565_BE);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma>40);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     a=frame(current,LASR_RAW_RGB565_LE);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma<40);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     puts("LASR raw CSI scanner/pulse: formats, stride, ROI, hold/rearm, broad-light rejection passed");
 }

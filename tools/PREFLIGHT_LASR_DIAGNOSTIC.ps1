@@ -4,7 +4,7 @@ param(
     [ValidatePattern('^COM[0-9]+$')][string]$Port = 'COM5',
     [Parameter(Mandatory=$true)][string]$CandidateFolder,
     [Parameter(Mandatory=$true)][string]$CameraBackupFolder,
-    [ValidateSet('sd-smoke','raw-csi')][string]$Mode = 'sd-smoke',
+    [ValidateSet('sd-smoke','raw-csi','combined','usb-preview')][string]$Mode = 'sd-smoke',
     # Optional: ONLY the previously flashed, CI-verified SD diagnostic image.
     # Required when the Tab5 is no longer running the camera backup.
     [string]$InstalledDiagnosticFolder = '',
@@ -39,8 +39,11 @@ try {
             throw 'Installed diagnostic reference has invalid SHA-256 evidence'
         }
         $oldPolicy = Get-Content -LiteralPath $previousPolicy -Raw
-        if ($oldPolicy -notmatch '(?m)^MODE=sd-smoke\r?$' -or
+        # Both previously installed SD-only and combined diagnostics can
+        # be verified against the complete original camera flash backup.
+        if ($oldPolicy -notmatch '(?m)^MODE=(sd-smoke|combined|usb-preview)\r?$' -or
             $oldPolicy -notmatch '(?m)^APP_OFFSET=0x10000\r?$' -or
+            $oldPolicy -notmatch '(?m)^MAX_PARTITION=1048576\r?$' -or
             $oldPolicy -notmatch '(?m)^FLASH=NO_AUTO_FLASH\r?$') {
             throw 'Previous diagnostic policy is incompatible'
         }

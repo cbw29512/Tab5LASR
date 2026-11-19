@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101827">
+  <title>Tab5 LASR — USB Laser Test</title>
+  <link rel="stylesheet" href="/serial-test.css">
+</head>
+<body>
+<main>
+  <header class="header">
+    <div>
+      <span class="eyebrow">TAB5 LASR · ENGINEERING DIAGNOSTIC</span>
+      <h1>Laser detection test</h1>
+      <p>View real Tab5 USB camera JPEG frames and unverified SIRT candidate locations. Camera images require the separate USB-preview firmware; no calibrated scoring or session recording.</p>
+    </div>
+    <div id="connection" class="connection" role="status" aria-live="polite">Disconnected</div>
+  </header>
+  <section class="toolbar" aria-label="USB serial controls">
+    <button id="connect" type="button">Connect Tab5 USB</button>
+    <button id="disconnect" type="button" disabled>Disconnect</button>
+    <button id="clear" type="button" class="secondary">Clear screen</button>
+    <button id="copy" type="button" class="secondary">Copy log</button>
+  </section>
+  <div class="notice">
+    <strong>To test:</strong> Connect the Tab5 by USB. The USB-preview diagnostic scans automatically; for the older combined diagnostic, turn <strong>LASER SCAN ON</strong> on the Tab5 screen.
+    Aim its built-in camera at a laser-free target before capture, then fire your unloaded SIRT trainer.
+    Close any other serial monitor before connecting. Use desktop Chrome or Edge.
+  </div>
+  <section class="panel live-camera-panel" aria-label="Real Tab5 CSI camera image">
+    <div class="panel-heading"><h2>Camera view from your Tab5</h2>
+      <span id="camera-meta">Waiting for real Tab5 camera frames over USB</span>
+    </div>
+    <div class="live-camera-stage" id="live-camera-stage">
+      <img id="usb-camera" alt="Actual CSI camera JPEG transmitted from Tab5" hidden>
+      <div id="camera-hit-markers" aria-hidden="true"></div>
+      <div id="camera-waiting">No camera image received yet. USB preview requires the separate reviewed camera firmware.</div>
+    </div>
+    <div class="preview-options">
+      <label for="orientation">Candidate overlay direction</label>
+      <select id="orientation">
+        <option value="flip180" selected>Rotate raw coordinates 180° (UYVY preview)</option>
+        <option value="raw">No rotation</option>
+        <option value="turn90">Rotate 90°</option>
+        <option value="turn270">Rotate 270°</option>
+      </select>
+    </div>
+    <p class="fine">Actual low-resolution color frames from Tab5 USB. The yellow dots represent raw uncalibrated detector coordinates, not scored hits; orientation needs physical verification.</p>
+  </section>
+  <section class="columns">
+    <div class="panel">
+      <div class="panel-heading">
+        <h2>Raw camera-coordinate plot</h2>
+        <span id="shots" class="count">0 candidate events</span>
+      </div>
+      <div id="target" class="target" role="img" aria-label="Uncalibrated camera-coordinate detection plot">
+        <div class="rings" aria-hidden="true"></div>
+        <div class="crosshair horizontal" aria-hidden="true"></div>
+        <div class="crosshair vertical" aria-hidden="true"></div>
+        <div id="hit-markers" class="hit-markers"></div>
+        <div id="empty-target" class="empty-target">Candidate positions appear here when detected</div>
+      </div>
+      <p class="fine">Coordinates are normalized raw CSI positions (0 to 1). Rings are visual guides only—not calibrated scores or zones.</p>
+    </div>
+    <div class="panel metrics">
+      <h2>Actual Tab5 telemetry</h2>
+      <dl>
+        <div><dt>Camera capture</dt><dd id="fps-capture">—</dd></div>
+        <div><dt>Screen preview</dt><dd id="fps-preview">—</dd></div>
+        <div><dt>Raw scan time</dt><dd id="scan-time">—</dd></div>
+        <div><dt>Worst scan</dt><dd id="scan-worst">—</dd></div>
+        <div><dt>Bright frames</dt><dd id="bright-frames">—</dd></div>
+        <div><dt>SD diagnostic</dt><dd id="sd-status">Not reported</dd></div>
+      </dl>
+      <p class="fine">Readings update only when the Tab5 actually emits corresponding USB log lines. Dashes mean no data received.</p>
+    </div>
+  </section>
+  <section class="panel log-panel">
+    <div class="panel-heading"><h2>USB diagnostic log</h2><span id="last-activity">No serial data</span></div>
+    <pre id="serial-log" aria-live="off">Connect the Tab5 to see its diagnostics.</pre>
+  </section>
+  <footer>
+    <p><strong>Privacy:</strong> Local browser-to-USB communication only. No cloud or remote connections.</p>
+    <p>Live MJPEG streaming from the Tab5 is a separate, unfinished firmware milestone.</p>
+  </footer>
+</main>
+<script type="module" src="/serial-test.js"></script>
+</body>
+</html>
