@@ -26,6 +26,8 @@ jobs:
           node --check web/serial-model.js
           node --check web/serial-plot.js
           node --check web/serial-test.js
+          node --check web/serial-jpeg.js
+          node --check web/serial-preview.js
       - name: Test status schema, stale feed gating, and missing data
         run: node --test web/tests/*.test.mjs
       - name: Enforce same-origin-only camera feed and no fake video
@@ -44,7 +46,8 @@ jobs:
           set -euo pipefail
           grep -Fq 'navigator.serial.requestPort()' web/serial-test.js
           grep -Fq 'UNVERIFIED candidate' web/serial-model.js
-          grep -Fq 'No camera video, calibration, scoring, or recording' web/serial-test.html
+          grep -Fq 'LASRJPEGV1' web/serial-jpeg.js
+          grep -Fq 'No camera video' web/serial-test.html
           if grep -Ei 'fake.*shot|fake.*stream|data:image|mock.*camera' web/serial-test.html; then
             echo 'USB serial test must not fabricate live camera or SIRT shots'; exit 1
           fi
