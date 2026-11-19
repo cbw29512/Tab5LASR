@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <stdint.h>
 
 // Same stack isolation that passed the first on-device SD diagnostic.
 // ESP-IDF FreeRTOS task stack argument is measured in BYTES.
