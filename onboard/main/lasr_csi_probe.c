@@ -21,7 +21,12 @@ static int s_recalibrate_on_next_frame;
 // The combined hardware test starts with the scanner disabled so that live
 // preview FPS can be compared with/without expensive raw pixel analysis.
 // Standalone raw-CSI diagnostics retain the existing scanner-on behavior.
-static int s_scanning_enabled = !CONFIG_LASR_COMBINED_DIAGNOSTIC;
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+#define LASR_SCAN_DEFAULT 0
+#else
+#define LASR_SCAN_DEFAULT 1
+#endif
+static int s_scanning_enabled = LASR_SCAN_DEFAULT;
 
 void lasr_csi_probe_set_scanning_enabled(bool enabled) {
     // A fresh ON transition requires an untouched, laser-OFF reference frame.
@@ -44,7 +49,7 @@ void lasr_csi_probe_end(void) {
     last_scan_us=worst_scan_us=0;
     __atomic_store_n(&s_recalibrate_on_next_frame, 0, __ATOMIC_RELEASE);
     __atomic_store_n(&s_scanning_enabled,
-                     !CONFIG_LASR_COMBINED_DIAGNOSTIC, __ATOMIC_RELEASE);
+                     LASR_SCAN_DEFAULT, __ATOMIC_RELEASE);
     reference_length=0;stride_bytes=0;source_width=source_height=0;
 }
 
