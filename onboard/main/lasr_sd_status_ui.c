@@ -41,7 +41,7 @@ void lasr_sd_status_ui_show(bool success) {
         "SIRT candidates are NOT saved as real shots." :
         "CAMERA + microSD: SD FAILED\n"
         "Do not claim combined physical test passed.\n"
-        "No formatting or deletion was attempted.");
+        "No autoformat or existing-session deletion.");
 #else
     lv_label_set_text(label, success ?
         "microSD DIAGNOSTIC: PASS\n"
