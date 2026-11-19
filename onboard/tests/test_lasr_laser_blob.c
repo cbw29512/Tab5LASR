@@ -53,6 +53,7 @@ int main(void) {
     uint8_t luma=0;
     lasr_raw_frame_t a=frame(current,LASR_RAW_RGB565_LE);
     assert(lasr_raw_luma(&a,16,22,&luma)&&luma==0);
+    assert(lasr_raw_luma_validated(&a,16,22)==luma);
     assert(!lasr_raw_luma(&a,W,1,&luma));
     a.length=H*STRIDE-1;assert(!lasr_raw_frame_valid(&a));
     a=frame(current,(lasr_raw_format_t)-1);assert(!lasr_raw_frame_valid(&a));
@@ -97,10 +98,13 @@ int main(void) {
     current[5*STRIDE+2*6]=0x80;current[5*STRIDE+2*6+1]=200;
     a=frame(current,LASR_RAW_UYVY);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma==200);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     current[5*STRIDE+2*6]=0xf8;current[5*STRIDE+2*6+1]=0;
     a=frame(current,LASR_RAW_RGB565_BE);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma>40);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     a=frame(current,LASR_RAW_RGB565_LE);
     assert(lasr_raw_luma(&a,6,5,&luma)&&luma<40);
+    assert(lasr_raw_luma_validated(&a,6,5)==luma);
     puts("LASR raw CSI scanner/pulse: formats, stride, ROI, hold/rearm, broad-light rejection passed");
 }
