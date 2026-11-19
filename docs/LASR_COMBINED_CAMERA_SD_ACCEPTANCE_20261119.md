@@ -68,3 +68,38 @@ It is **not** a release-ready target scorer or live SIRT session recorder.
 Missing SD, stack overflow, camera stall, corrupted/overwritten preexisting
 files, build over 1 MiB, or a live-flash mismatch => stop. Never repartition,
 auto-format, retry dangerous writes, or claim hardware completion.
+
+## Physical result reported by operator (2026-11-18)
+
+- Operator confirmed **live camera preview** with the combined-test
+  `microSD PASS` panel overlay on the physical Tab5. This establishes
+  both camera and SD can operate in the same installed build at least for
+  the observed interval. Full FPS and post-SD endurance measurements were
+  not supplied; do not silently certify them.
+- The center overlay was subsequently relocated to a small bottom-right
+  status. This UI change is repository-side only until separately flashed.
+- A later revision adds an **atomic CSI frame-progress counter**, checking
+  frames continue to arrive for 700ms *after* synthetic SD verification,
+  before reporting combined PASS. Needs exact-head CI and physical retest.
+- Safe upgrade comparison now accepts a previously installed, exact-hash
+  verified `MODE=combined` artifact, rather than wrongly assuming the old
+  SD-only image remains installed. Existing downloads can be reused after
+  hash and live-flash verification.
+- Raw-frame gap handling resets pulse state to WAIT_DARK (without inventing
+  shots) and does not label normal dropped-frame rearming as sensor failure.
+  Synthetic regression test included.
+
+## Next physical SIRT probe acceptance
+
+Use the review-only raw camera probe on the Tab5 *without any live recording*.
+When safely testing an unloaded SIRT training device, observe USB serial logs
+for `UNVERIFIED candidate` lines with monotonic timestamps and raw normalized
+(x,y). If none appear, collect raw CSI format, capture FPS, lighting and
+distance before tuning thresholds; no unmeasured sensitivity claims.
+
+A visible pulse should produce **at most one** event until darkness re-arms.
+A persistent lamp must not count as a sequence of shots. Report any capture
+FPS slowdown, screen freeze, reboots or erroneous bright-room detections.
+Do not feed these uncalibrated candidates into `lasr_recorder_task_shot`.
+Save actual session data only after user-confirmed dark calibration,
+true GO timing, coordinate alignment and source-backed scoring gates.
