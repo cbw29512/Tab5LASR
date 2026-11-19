@@ -17,12 +17,18 @@ static lasr_laser_pipeline_t pipeline;
 static bool reference_set;
 static uint32_t candidate_events;
 static uint32_t last_scan_us, worst_scan_us;
+static int s_recalibrate_on_next_frame;
 // The combined hardware test starts with the scanner disabled so that live
 // preview FPS can be compared with/without expensive raw pixel analysis.
 // Standalone raw-CSI diagnostics retain the existing scanner-on behavior.
 static int s_scanning_enabled = !CONFIG_LASR_COMBINED_DIAGNOSTIC;
 
 void lasr_csi_probe_set_scanning_enabled(bool enabled) {
+    // A fresh ON transition requires an untouched, laser-OFF reference frame.
+    // Let the capture task perform this reset; LVGL never mutates the camera
+    // baseline or the pulse detector concurrently.
+    if (enabled) __atomic_store_n(&s_recalibrate_on_next_frame, 1,
+                                  __ATOMIC_RELEASE);
     __atomic_store_n(&s_scanning_enabled, enabled ? 1 : 0, __ATOMIC_RELEASE);
     ESP_LOGW(TAG, "Raw CSI candidate scanner %s (NO real shots stored)",
              enabled ? "ON" : "OFF");
@@ -36,6 +42,7 @@ void lasr_csi_probe_end(void) {
     if (reference) heap_caps_free(reference);
     reference=NULL;reference_set=false;candidate_events=0;
     last_scan_us=worst_scan_us=0;
+    __atomic_store_n(&s_recalibrate_on_next_frame, 0, __ATOMIC_RELEASE);
     __atomic_store_n(&s_scanning_enabled,
                      !CONFIG_LASR_COMBINED_DIAGNOSTIC, __ATOMIC_RELEASE);
     reference_length=0;stride_bytes=0;source_width=source_height=0;
@@ -81,6 +88,15 @@ bool lasr_csi_probe_observe(const void *borrowed,size_t length,uint64_t timestam
     // Always return the borrowed V4L2 buffer promptly when scanning is OFF.
     // The UI can enable the full uncalibrated scanner for an A/B FPS test.
     if (!lasr_csi_probe_scanning_enabled()) return true;
+    if (__atomic_exchange_n(&s_recalibrate_on_next_frame, 0,
+                            __ATOMIC_ACQ_REL)) {
+        reference_set = false;
+        if (!lasr_pulse_init(&pipeline.pulse, pipeline.pulse.config)) {
+            ESP_LOGE(TAG, "Cannot re-arm CSI pulse scanner for fresh baseline");
+            return false;
+        }
+        ESP_LOGW(TAG, "Scanner enabled; collecting fresh UNVERIFIED dark baseline");
+    }
     if (!reference_set) {
         // Copy before the capture loop requeues its V4L2-owned memory.
         memcpy(reference,borrowed,reference_length);
