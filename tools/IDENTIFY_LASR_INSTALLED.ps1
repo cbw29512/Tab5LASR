@@ -50,6 +50,10 @@ try {
 
     $matches = @()
     foreach ($candidate in $PreviousArtifactFolders) {
+        if (!(Test-Path -LiteralPath $candidate -PathType Container)) {
+            Write-Host "SKIPPED absent artifact folder: $candidate" -ForegroundColor Yellow
+            continue
+        }
         $folder = (Resolve-Path -LiteralPath $candidate -ErrorAction Stop).Path
         $app = Join-Path $folder 'tab5lasr_onboard.bin'
         $sums = Join-Path $folder 'SHA256SUMS.txt'
