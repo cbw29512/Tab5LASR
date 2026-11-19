@@ -16,7 +16,8 @@ try {
     # The browser requires a trustworthy localhost origin for Web Serial.
     # Bind only loopback; no network exposure or camera stream is created.
     $server = Start-Process -FilePath $python.Source -WorkingDirectory $web `
-        -ArgumentList @('-m','http.server',"$Port",'--bind','127.0.0.1') `
+        -ArgumentList @('-m','http.server',"$Port",'--bind','127.0.0.1',`
+                        '--directory',("`"" + $web + "`"")) `
         -PassThru
     Start-Sleep -Milliseconds 1200
     $server.Refresh()
@@ -26,12 +27,12 @@ try {
     $url = "http://127.0.0.1:$Port/serial-test.html"
     $pageResult = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 4
     if ($pageResult.StatusCode -ne 200 -or
-        $pageResult.Content -notmatch 'Tab5 LASR.*USB Laser Test') {
+        $pageResult.Content -notmatch 'Camera view from your Tab5') {
         throw 'Local web server did not serve the expected USB test page'
     }
     Write-Host "LOCAL LASR USB TEST: $url" -ForegroundColor Green
     Write-Host 'Select Connect Tab5 USB in desktop Chrome or Edge.' -ForegroundColor Cyan
-    Write-Host 'No live camera stream; this page reads real serial candidates only.' -ForegroundColor Yellow
+    Write-Host 'Real USB camera frames require the separately installed usb-preview firmware.' -ForegroundColor Yellow
     Start-Process $url
 }
 catch {
