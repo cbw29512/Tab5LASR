@@ -51,7 +51,14 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
             ESP_LOGE(TAG, "Invalid capture buffer index or length");
             break;
         }
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+        // SD worker reads this counter concurrently. Atomic access avoids
+        // racing with the physical camera capture task.
+        __atomic_add_fetch(&g_onboard_status.captured_frames, 1U,
+                           __ATOMIC_RELEASE);
+#else
         g_onboard_status.captured_frames++;
+#endif
         g_onboard_status.last_frame_monotonic_us = esp_timer_get_time();
 #if CONFIG_LASR_CSI_DIAGNOSTIC
         // Observe raw V4L2-owned bytes BEFORE QBUF, not Color 2/4 LCD pixels.
