@@ -6,6 +6,7 @@ on:
       - '.github/workflows/lasr-hardware-diagnostic-build.yml'
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
       - 'tools/PREPARE_LASR_SD_TEST.ps1'
+      - 'tools/PREPARE_LASR_COMBINED_TEST.ps1'
       - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
       - 'tools/verify_installed_sd_upgrade.py'
       - 'tools/tests/test_verify_installed_sd_upgrade.py'
@@ -96,6 +97,7 @@ jobs:
           $errors = $null
           foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
                               'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/PREPARE_LASR_COMBINED_TEST.ps1',
                               'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
             $tokens = $null
             $errors = $null
