@@ -5,6 +5,9 @@
 #include "tab5_power_widget.h"
 #include "onboard_color_ui.h"
 #include "sdkconfig.h"
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+#include "lasr_usb_preview.h"
+#endif
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
 #include "lasr_sd_smoke.h"
 #include "lasr_sd_status_ui.h"
@@ -92,6 +95,11 @@ void app_main(void) {
 #else
 #if CONFIG_LASR_COMBINED_DIAGNOSTIC
     ESP_LOGW(TAG, "OPT-IN CAMERA+SD concurrency test: NO real shot storage or scoring");
+#endif
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+    if (!lasr_usb_preview_start()) {
+        ESP_LOGE(TAG,"USB preview unavailable; camera remains local");
+    }
 #endif
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
