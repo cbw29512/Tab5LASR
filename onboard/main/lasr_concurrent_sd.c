@@ -31,9 +31,11 @@ bool lasr_concurrent_sd_start(void) {
         return false;
     }
     s_started = true; // One attempt, even if task allocation fails.
+    // Equal priority with the normal main task prevents SD writes from
+    // monopolizing the core while physical CSI frames are being captured.
     if (xTaskCreate(run_sd_probe, "lasr_camera_sd",
                     LASR_CONCURRENT_STACK_BYTES, NULL,
-                    tskIDLE_PRIORITY + 2, NULL) != pdPASS) {
+                    tskIDLE_PRIORITY + 1, NULL) != pdPASS) {
         ESP_LOGE(TAG, "Cannot allocate independent SD probe task; no SD test ran");
         return false;
     }
