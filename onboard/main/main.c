@@ -84,6 +84,9 @@ void app_main(void) {
         lasr_sd_status_ui_show(false);
     }
 #else
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+    ESP_LOGW(TAG, "OPT-IN CAMERA+SD concurrency test: NO real shot storage or scoring");
+#endif
     ESP_LOGI(TAG, "Onboard MIPI CSI only. USB webcam is not used.");
     if (!onboard_camera_run()) {
         ESP_LOGE(TAG, "Built-in camera failed; see CSI sensor/format errors");
