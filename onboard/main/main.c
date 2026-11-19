@@ -65,9 +65,15 @@ void app_main(void) {
         return;
     }
     tab5_power_widget_attach(lv_scr_act());
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+    // Physical comparison already selected Color 2 as the default.
+    // Omit the optional swatch/test button ONLY in the compact combined
+    // engineering image; onboard_view still applies the Color 2 transform.
+#else
     if (!onboard_color_ui_attach(lv_scr_act())) {
         ESP_LOGE(TAG, "Color diagnostic UI unavailable; original camera preview remains valid");
     }
+#endif
     bsp_display_unlock();
 
 #if CONFIG_LASR_SD_SMOKE_ON_BOOT
