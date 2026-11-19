@@ -1,6 +1,7 @@
 #include "lasr_concurrent_sd.h"
 #include "lasr_sd_smoke.h"
 #include "lasr_sd_status_ui.h"
+#include "onboard_state.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -16,12 +17,30 @@ static void run_sd_probe(void *arg) {
     ESP_LOGW(TAG, "CAMERA+SD TEST starting: camera is already streaming");
     ESP_LOGW(TAG, "Synthetic storage only; SIRT candidates are NOT saved");
     const esp_err_t result = lasr_sd_smoke_once();
-    if (result == ESP_OK) {
-        ESP_LOGW(TAG, "CAMERA+SD TEST: SD persistence PASS; verify CSI streaming separately");
-    } else {
-        ESP_LOGE(TAG, "CAMERA+SD TEST: SD FAIL (%s)", esp_err_to_name(result));
+
+    // Status is PASS only after checking that new camera frames continue
+    // to arrive AFTER the storage task finishes. This is a physical
+    // concurrency test, not a one-time camera-startup assertion.
+    const uint32_t before = __atomic_load_n(
+        &g_onboard_status.captured_frames, __ATOMIC_ACQUIRE);
+    vTaskDelay(pdMS_TO_TICKS(700));
+    const uint32_t after = __atomic_load_n(
+        &g_onboard_status.captured_frames, __ATOMIC_ACQUIRE);
+    const bool camera_live = after > before;
+    ESP_LOGI(TAG, "Post-SD camera frames: before=%lu after=%lu",
+             (unsigned long)before, (unsigned long)after);
+    if (!camera_live) {
+        ESP_LOGE(TAG, "CAMERA+SD TEST FAILED: CSI stopped after SD operation");
     }
-    lasr_sd_status_ui_show(result == ESP_OK);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG, "CAMERA+SD TEST FAILED: SD (%s)",
+                 esp_err_to_name(result));
+    }
+    const bool passed = result == ESP_OK && camera_live;
+    if (passed) {
+        ESP_LOGW(TAG, "CAMERA+SD TEST PASS: synthetic SD verified, CSI still streaming");
+    }
+    lasr_sd_status_ui_show(passed);
     vTaskDelete(NULL);
 }
 
