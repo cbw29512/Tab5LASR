@@ -7,6 +7,7 @@ on:
       - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
       - 'tools/PREPARE_LASR_SD_TEST.ps1'
       - 'tools/PREPARE_LASR_COMBINED_TEST.ps1'
+      - 'tools/PREPARE_LASR_USB_PREVIEW_TEST.ps1'
       - 'tools/IDENTIFY_LASR_INSTALLED.ps1'
       - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
       - 'tools/verify_installed_sd_upgrade.py'
@@ -116,6 +117,7 @@ jobs:
           foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
                               'tools/PREPARE_LASR_SD_TEST.ps1',
                               'tools/PREPARE_LASR_COMBINED_TEST.ps1',
+                              'tools/PREPARE_LASR_USB_PREVIEW_TEST.ps1',
                               'tools/IDENTIFY_LASR_INSTALLED.ps1',
                               'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
             $tokens = $null
