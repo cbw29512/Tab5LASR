@@ -103,3 +103,32 @@ FPS slowdown, screen freeze, reboots or erroneous bright-room detections.
 Do not feed these uncalibrated candidates into `lasr_recorder_task_shot`.
 Save actual session data only after user-confirmed dark calibration,
 true GO timing, coordinate alignment and source-backed scoring gates.
+
+## Camera FPS / white-overlay hardware regression (2026-11-19)
+
+Operator reported the combined build still displayed a white status box and
+roughly 1 FPS live preview. The exact camera-frame timings were not supplied;
+full-frame raw CSI scanning in the capture loop is a plausible bottleneck,
+**not yet a measured root cause**.
+
+The next opt-in combined test image removes the LVGL parent panel entirely.
+A transparent text status `CSI + SD PASS` appears in the bottom-right; a
+small bottom-left `LASER SCAN OFF` button permits a physical FPS A/B test.
+The combined engineering build starts with scanning **OFF** to prioritize
+camera preview. Tap the button to enable `LASER SCAN ON` while watching
+preview FPS and USB serial logs; tap again to disable.
+
+The raw CSI scanner now validates entire V4L2 frame metadata once before
+its pixel loops, rather than for each pixel. The safe externally callable
+bounded decoder is retained, and host tests compare both decoders for
+RGB565 LE/BE and UYVY. Serial scanner diagnostics provide measured scan
+microseconds and candidate counts every ten scanned frames.
+
+**Acceptance**: both modes must retain a live preview; record measured
+`capture` and `preview` FPS lines from `lasr_csi`, plus `scan_last_us`
+and `worst_us` from `lasr_csi_probe` when ON. This confirms whether
+the scanner or display/camera path is the bottleneck. The 1 MiB hard
+partition gate and app-only recovery comparisons remain mandatory.
+
+`SCAN OFF` does not detect any laser pulses, and `SCAN ON` still uses
+uncalibrated thresholds. Neither mode writes actual SIRT shots.
