@@ -8,6 +8,15 @@ const metadata=document.getElementById("camera-meta");
 const overlay=document.getElementById("camera-hit-markers");
 const orientation=document.getElementById("orientation");
 let lastSequence=0,accepted=0,lastFrameAt=0,lastHits=[];
+picture.onload=()=> {
+  picture.hidden=false;
+  placeholder.hidden=true;
+};
+picture.onerror=()=> {
+  picture.hidden=true;
+  placeholder.hidden=false;
+  metadata.textContent="USB JPEG arrived but the browser could not decode it";
+};
 
 function oriented(x,y,mode) {
   switch(mode) {
@@ -28,7 +37,6 @@ export function acceptCameraLine(line) {
     if (frame.seq<=lastSequence) return true;
     lastSequence=frame.seq;accepted++;lastFrameAt=performance.now();
     picture.src=`data:image/jpeg;base64,${frame.base64}`;
-    picture.hidden=false;placeholder.hidden=true;
     metadata.textContent=`Real Tab5 CSI JPEG · ${frame.width}×${frame.height} · frame ${frame.seq} · ${accepted} received`;
     return true;
   } catch (error) {
@@ -68,3 +76,16 @@ export function clearCameraView() {
 export function cameraFrameAge() {
   return lastFrameAt ? Math.round(performance.now()-lastFrameAt) : null;
 }
+
+setInterval(()=>{
+  try {
+    if (!lastFrameAt) return;
+    if (performance.now()-lastFrameAt>5000) {
+      picture.hidden=true;
+      placeholder.hidden=false;
+      metadata.textContent="Camera stream stale: no new verified USB JPEG in 5 seconds";
+    }
+  } catch(error) {
+    console.warn("Could not update USB preview freshness",error);
+  }
+},1000);
