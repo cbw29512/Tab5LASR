@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'web/**'
+      - 'tools/OPEN_LASR_USB_TEST.ps1'
       - '.github/workflows/web-viewer.yml'
   workflow_dispatch:
 jobs:
@@ -47,3 +48,21 @@ jobs:
           if grep -Ei 'fake.*shot|fake.*stream|data:image|mock.*camera' web/serial-test.html; then
             echo 'USB serial test must not fabricate live camera or SIRT shots'; exit 1
           fi
+
+
+  windows-launcher-syntax:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check PowerShell 5.1 USB localhost launcher syntax
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            'tools/OPEN_LASR_USB_TEST.ps1', [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-Table -AutoSize
+            throw 'USB localhost launcher PowerShell parser failed'
+          }
+          Write-Host 'PASS: no device attached and no local server started'
