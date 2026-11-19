@@ -52,8 +52,8 @@ void lasr_sd_status_ui_show(bool success) {
     // PASS confirms only the synthetic SD test, not real SIRT hits.
     // Detailed findings remain on USB serial and on the card.
     lv_label_set_text(label, success ?
-        "microSD PASS (synthetic)" :
-        "microSD FAILED - check log");
+        "CSI + SD PASS (synthetic)" :
+        "CSI / SD FAILED - check log");
 #else
     lv_label_set_text(label, success ?
         "microSD DIAGNOSTIC: PASS\n"
