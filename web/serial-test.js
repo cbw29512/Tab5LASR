@@ -13,14 +13,12 @@ const view = {
   markers:el("hit-markers"), empty:el("empty-target"), shots:el("shots"),
   log:el("serial-log"), activity:el("last-activity")
 };
-
 function status(text, mode) {
   view.status.textContent = text;
   view.status.dataset.state = mode;
   view.connect.disabled = state.active;
   view.disconnect.disabled = !state.active;
 }
-
 function draw() {
   try {
     el("fps-capture").textContent = state.fps ? `${state.fps.fps_capture.toFixed(1)} FPS` : "—";
@@ -37,7 +35,6 @@ function draw() {
     console.error("LASR USB diagnostic rendering failed", error);
   }
 }
-
 function acceptLine(input) {
   try {
     const line = input.replace(/\x1b\[[0-9;]*m/g, "").trim();
@@ -56,7 +53,6 @@ function acceptLine(input) {
     console.error("LASR USB diagnostic line handling failed", error);
   }
 }
-
 function consume(chunk) {
   try {
     state.buffer += chunk;
@@ -75,7 +71,6 @@ function consume(chunk) {
     console.error("LASR serial data decoding failed", error);
   }
 }
-
 async function readSerial() {
   const decoder = new TextDecoder();
   try {
@@ -103,7 +98,6 @@ async function readSerial() {
     view.disconnect.disabled = true;
   }
 }
-
 async function connect() {
   try {
     if (!("serial" in navigator)) {
