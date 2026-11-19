@@ -13,10 +13,11 @@ static uint32_t source_width, source_height;
 static lasr_raw_format_t source_format;
 static lasr_laser_pipeline_t pipeline;
 static bool reference_set;
+static uint32_t candidate_events;
 
 void lasr_csi_probe_end(void) {
     if (reference) heap_caps_free(reference);
-    reference=NULL;reference_set=false;
+    reference=NULL;reference_set=false;candidate_events=0;
     reference_length=0;stride_bytes=0;source_width=source_height=0;
 }
 
@@ -72,8 +73,18 @@ bool lasr_csi_probe_observe(const void *borrowed,size_t length,uint64_t timestam
     if (!lasr_laser_pipeline_step(&pipeline,&now,&dark,timestamp_us,&event))
         return false;
     if (event.shot_detected) {
+        ++candidate_events;
         ESP_LOGW(TAG,"UNVERIFIED candidate t=%" PRIu64 "us x=%.4f y=%.4f (not recorded)",
                  event.first_seen_us,(double)event.x_norm,(double)event.y_norm);
+    }
+    // Periodic observability distinguishes a camera with no candidate spots
+    // from one seeing bright frames that do not pass debounce. No fake shots.
+    if (pipeline.scanned_frames &&
+        (pipeline.scanned_frames % 120U) == 0U) {
+        ESP_LOGI(TAG, "CSI probe frames=%lu bright=%lu pulse_candidates=%lu",
+                 (unsigned long)pipeline.scanned_frames,
+                 (unsigned long)pipeline.bright_frames,
+                 (unsigned long)candidate_events);
     }
     return true;
 }
