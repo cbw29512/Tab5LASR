@@ -77,6 +77,19 @@ int main(void) {
     step(&p,7000,false);step(&p,8000,false);
     spot(current,15,21);
     step(&p,9000,false);step(&p,10000,true); // Re-arm after dark.
+
+    // A long interval is normal when camera capture stalls temporarily.
+    // Scanner reports the frame as processed, but discards the old pulse
+    // and requires fresh dark frames before detecting another hit.
+    memset(current,0,sizeof(current));
+    step(&p,40000,false); // 30ms exceeds the configured 10ms max gap.
+    spot(current,15,21);
+    step(&p,41000,false); // Cannot count a laser already visible after gap.
+    memset(current,0,sizeof(current));
+    step(&p,42000,false);step(&p,43000,false);
+    spot(current,15,21);
+    step(&p,44000,false);step(&p,45000,true);
+
     memset(current,0xff,sizeof(current));
     assert(lasr_blob_scan(&a,&b,&config,&found)&&!found.visible);
     // UYVY luma at byte +1; deliberate RGB565X byte order handling.
