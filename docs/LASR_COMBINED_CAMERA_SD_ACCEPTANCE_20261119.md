@@ -1,0 +1,70 @@
+# Tab5 LASR: camera + microSD combined hardware acceptance
+
+## Objective and definition of done
+
+This **engineering** build tests the physical onboard CSI camera and the already
+proven, no-format synthetic microSD session writer concurrently, without touching
+the bootloader, partition map, Wi-Fi coprocesor, private recovery backups, or
+existing saved sessions.
+
+It is **not** a release-ready target scorer or live SIRT session recorder.
+
+## Data schema and state
+
+- `CONFIG_LASR_COMBINED_DIAGNOSTIC`: off by default. CI sets this only for the
+  independently reviewed **combined** profile.
+- `CONFIG_LASR_CSI_DIAGNOSTIC`: read-only raw camera blob/pulse candidates.
+  These have timestamp and raw normalized X/Y, but are not calibrated shots.
+- `LASR/diagnostics/synthetic-session-<id>/LASR/sessions/fake_shots/`:
+  existing fixed 2-event UNSCORED fixture. These are fake tests, never laser data.
+- Camera state: `CAMERA_INIT -> FORMAT_READY -> STREAMING`.
+- Storage state: `NOT_STARTED -> TASK_STARTED -> MOUNTED -> WRITTEN ->
+  UNMOUNTED -> REMOUNTED -> EXACT_BYTES_VERIFIED -> UNMOUNTED`, or FAILED.
+- `PASS` on the SD widget means synthetic storage persistence only. Physical
+  concurrent success additionally requires camera FPS and preview to continue
+  **throughout** the storage operation.
+
+## Logic flow (engineering profile only)
+
+1. Display/charger/battery diagnostics start exactly as for normal camera.
+2. The real CSI camera calls `STREAMON`, dequeues and displays real frames.
+3. Once at least 4 frames have arrived, capture starts a **separate 24 KiB**
+   SD task without waiting for filesystem I/O.
+4. That task runs the previously physically proven no-format SD smoke and
+   synthetic session; actual camera capture continues independently.
+5. Capture optionally logs unverified bright-point pulse candidates in raw
+   sensor coordinates. No candidate is written to any shooting session.
+6. SD status UI displays PASS/FAIL. Neither status is a SIRT accuracy claim.
+
+## Build gate
+
+- Draft PR #12 targets the existing storage work in draft PR #11; do not merge.
+- ESP-IDF 6.1 produces a **combined** review artifact with explicit
+  `FLASH=NO_AUTO_FLASH` policy and image SHA-256. Strictly reject if it exceeds
+  the original `0x100000` factory app partition.
+- CI also verifies FAT long filenames, no SD-only boot mode, ESP32-P4 chip
+  compatibility, Windows PowerShell 5.1 syntax, and read-only upgrade guards.
+- The preflight may inspect the real device **read-only** against the verified
+  last-installed SD diagnostic using the original private full-flash recovery.
+  Only the user explicitly authorizes app-only installation with `FLASH`.
+
+## Physical acceptance (not proven by CI)
+
+- Confirm the *correct* COM port and original full-flash camera backup.
+- Verify camera starts and preview/Color 2 remain readable, and CSI FPS is
+  logged again after `CAMERA+SD TEST` begins.
+- Verify SD task reports success and the display shows
+  `microSD DIAGNOSTIC: PASS`; capture must continue after it completes.
+- Power-cycle and use `tools/VERIFY_LASR_SD_RESULTS.ps1` on the removed
+  card to inspect the preserved unique test files. Ensure old sessions remain.
+- With an unloaded, safe SIRT training device, test repeated pulse, stationary
+  bright light, and rearm behavior. **Only candidate logs** are expected.
+- Explicitly validate battery-only, unplug/replug, camera fps and charging.
+- USB-C file transfer, Wi-Fi file transfer, calibrated GO timing and true
+  shot recording/scoring remain separate acceptance gates.
+
+## Stop conditions
+
+Missing SD, stack overflow, camera stall, corrupted/overwritten preexisting
+files, build over 1 MiB, or a live-flash mismatch => stop. Never repartition,
+auto-format, retry dangerous writes, or claim hardware completion.
