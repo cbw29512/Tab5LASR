@@ -7,7 +7,7 @@ const placeholder=document.getElementById("camera-waiting");
 const metadata=document.getElementById("camera-meta");
 const overlay=document.getElementById("camera-hit-markers");
 const orientation=document.getElementById("orientation");
-let lastSequence=0,accepted=0,lastFrameAt=0;
+let lastSequence=0,accepted=0,lastFrameAt=0,lastHits=[];
 
 function oriented(x,y,mode) {
   switch(mode) {
@@ -38,6 +38,7 @@ export function acceptCameraLine(line) {
 }
 export function renderCameraHitOverlay(hits) {
   try {
+    lastHits=hits;
     overlay.replaceChildren();
     for(const hit of hits.slice(-30)){
       const [x,y]=oriented(hit.x_norm,hit.y_norm,orientation.value);
@@ -52,17 +53,14 @@ export function renderCameraHitOverlay(hits) {
     console.error("Camera overlay rendering failed",error);
   }
 }
-orientation.addEventListener("change",()=> {
-  // Caller redraws markers on the next camera/telemetry event.
-  overlay.replaceChildren();
-});
+orientation.addEventListener("change",()=>renderCameraHitOverlay(lastHits));
 export function clearCameraView() {
   try {
     picture.removeAttribute("src");picture.hidden=true;
     placeholder.hidden=false;
     overlay.replaceChildren();
     metadata.textContent="Waiting for real Tab5 camera frames over USB";
-    lastSequence=0;accepted=0;lastFrameAt=0;
+    lastSequence=0;accepted=0;lastFrameAt=0;lastHits=[];
   } catch(error) {
     console.error("Could not clear USB camera preview",error);
   }
