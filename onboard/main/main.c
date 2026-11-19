@@ -68,7 +68,7 @@ void app_main(void) {
         return;
     }
     tab5_power_widget_attach(lv_scr_act());
-#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC || CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
     // Physical comparison already selected Color 2 as the default.
     // Omit the optional swatch/test button ONLY in the compact combined
     // engineering image; onboard_view still applies the Color 2 transform.
