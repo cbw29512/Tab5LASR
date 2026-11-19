@@ -1,7 +1,6 @@
 #include "lasr_concurrent_sd.h"
 #include "lasr_sd_smoke.h"
 #include "lasr_sd_status_ui.h"
-#include "onboard_state.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -11,6 +10,8 @@
 #define LASR_CONCURRENT_STACK_BYTES (24U * 1024U)
 static const char *TAG = "lasr_camera_sd";
 static bool s_started;
+// Only a read-only frame counter crosses the CSI/SD task boundary.
+static uint32_t s_camera_frames;
 
 static void run_sd_probe(void *arg) {
     (void)arg;
@@ -22,10 +23,10 @@ static void run_sd_probe(void *arg) {
     // to arrive AFTER the storage task finishes. This is a physical
     // concurrency test, not a one-time camera-startup assertion.
     const uint32_t before = __atomic_load_n(
-        &g_onboard_status.captured_frames, __ATOMIC_ACQUIRE);
+        &s_camera_frames, __ATOMIC_ACQUIRE);
     vTaskDelay(pdMS_TO_TICKS(700));
     const uint32_t after = __atomic_load_n(
-        &g_onboard_status.captured_frames, __ATOMIC_ACQUIRE);
+        &s_camera_frames, __ATOMIC_ACQUIRE);
     const bool camera_live = after > before;
     ESP_LOGI(TAG, "Post-SD camera frames: before=%lu after=%lu",
              (unsigned long)before, (unsigned long)after);
@@ -60,4 +61,13 @@ bool lasr_concurrent_sd_start(void) {
     }
     ESP_LOGI(TAG, "Concurrent SD probe scheduled after CSI streaming began");
     return true;
+}
+
+void lasr_concurrent_sd_frame_returned(void) {
+    // Called only after a real V4L2 frame is safely returned to the driver.
+    const uint32_t count = __atomic_add_fetch(
+        &s_camera_frames, 1U, __ATOMIC_RELEASE);
+    if (count == 4U && !lasr_concurrent_sd_start()) {
+        ESP_LOGE(TAG, "Cannot start concurrent SD task after fourth CSI frame");
+    }
 }
