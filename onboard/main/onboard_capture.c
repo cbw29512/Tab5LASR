@@ -36,9 +36,6 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
     int64_t sampled = began;
     uint32_t prev_rx = 0, prev_draw = 0;
     g_onboard_status.state = ONBOARD_STREAMING;
-#if CONFIG_LASR_COMBINED_DIAGNOSTIC
-    bool combined_probe_attempted = false;
-#endif
 #if CONFIG_LASR_CSI_DIAGNOSTIC
     bool warned_probe=false;
 #endif
@@ -78,14 +75,10 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
             break;
         }
 #if CONFIG_LASR_COMBINED_DIAGNOSTIC
-        // Only launch once the real camera is STREAMON and has delivered
-        // multiple frames. The SD task runs concurrently with this loop;
-        // it never writes from inside the capture callback.
-        if (!combined_probe_attempted && g_onboard_status.captured_frames >= 4U) {
-            combined_probe_attempted = true;
-            if (!lasr_concurrent_sd_start())
-                ESP_LOGE(TAG, "Concurrent camera+SD smoke task could not start");
-        }
+        // Launch only after four real frames; SD runs in a separate task.
+        if (g_onboard_status.captured_frames == 4U &&
+            !lasr_concurrent_sd_start())
+            ESP_LOGE(TAG, "Concurrent SD test task failed to start");
 #endif
         const int64_t now = esp_timer_get_time();
         if (now - sampled >= 5000000) {
