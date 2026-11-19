@@ -119,8 +119,8 @@ try {
         Write-Host 'READ-ONLY PREFLIGHT COMPLETE. NO FLASH OCCURRED.' -ForegroundColor Green
         return
     }
-    $confirm = Read-Host 'Type FLASH LASR DIAGNOSTIC to replace the installed application at 0x10000'
-    if ($confirm -cne 'FLASH LASR DIAGNOSTIC') { throw 'Cancelled; no firmware written' }
+    $confirm = Read-Host 'Type FLASH to replace the installed application at 0x10000'
+    if ($confirm -cne 'FLASH') { throw 'Cancelled; no firmware written' }
     & python -m esptool --chip esp32p4 --port $Port --baud 460800 `
         write-flash 0x10000 $image
     if ($LASTEXITCODE -ne 0) { throw 'Application-only diagnostic flash failed' }
