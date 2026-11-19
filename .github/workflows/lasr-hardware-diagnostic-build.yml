@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [sd-smoke, raw-csi]
+        mode: [sd-smoke, raw-csi, combined]
     steps:
       - uses: actions/checkout@v4
       - name: Opt in to exactly one read-only / controlled diagnostic
@@ -29,6 +29,9 @@ jobs:
               printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             raw-csi)
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
+            combined)
+              # Separate review-only binary. Never enable on normal camera boot.
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
           esac
       - name: Compile opt-in ESP32-P4 firmware with pinned project config
@@ -43,9 +46,16 @@ jobs:
           set -euo pipefail
           python -m pip install esptool==5.6.0
           # Keep FAT filenames and stack settings accountable in the built image.
-          if [ "${{ matrix.mode }}" = "sd-smoke" ]; then
+          if [ "${{ matrix.mode }}" = "sd-smoke" ] || [ "${{ matrix.mode }}" = "combined" ]; then
             grep -Eq '^#define CONFIG_FATFS_LFN_HEAP 1$' onboard/build/config/sdkconfig.h
             grep -Eq '^#define CONFIG_FATFS_MAX_LFN 255$' onboard/build/config/sdkconfig.h
+          fi
+          if [ "${{ matrix.mode }}" = "combined" ]; then
+            grep -Eq '^#define CONFIG_LASR_COMBINED_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_CSI_DIAGNOSTIC 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_LASR_SD_SMOKE_ON_BOOT' onboard/build/config/sdkconfig.h && {
+              echo 'STOP: SD-only path also enabled'; exit 1;
+            }
           fi
           test -f onboard/build/tab5lasr_onboard.bin
           python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
