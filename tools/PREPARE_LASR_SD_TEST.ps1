@@ -5,6 +5,7 @@ param(
     [Parameter(Mandatory=$true)][long]$RunId,
     [Parameter(Mandatory=$true)][string]$CameraBackupFolder,
     [ValidatePattern('^COM[0-9]+$')][string]$Port = 'COM5',
+    [string]$InstalledDiagnosticFolder = '',
     [switch]$Flash
 )
 $ErrorActionPreference = 'Stop'
@@ -47,7 +48,7 @@ try {
     # Delegate every hash, partition, live-flash and typed-consent check.
     # PowerShell switch splatting does not bypass any preflight prompt.
     & $preflight -CandidateFolder $folder -CameraBackupFolder $CameraBackupFolder `
-        -Port $Port -Mode 'sd-smoke' -Flash:$Flash
+        -Port $Port -Mode 'sd-smoke' -InstalledDiagnosticFolder $InstalledDiagnosticFolder -Flash:$Flash
     if ($LASTEXITCODE -ne 0) { throw 'Device recovery preflight did not pass' }
     Write-Host 'LASR SD diagnostic preparation completed.' -ForegroundColor Green
 }
