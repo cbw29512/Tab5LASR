@@ -74,7 +74,11 @@ void lasr_sd_status_ui_show(bool success) {
         bsp_display_unlock();
         return;
     }
+#if CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_14, 0);
+#else
     lv_obj_set_style_text_font(label, &lv_font_montserrat_20, 0);
+#endif
     lv_obj_set_width(label, 650);
     lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
     lv_label_set_text(label, success ?
