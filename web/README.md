@@ -45,3 +45,31 @@ A working phone/PC **Wi-Fi live video viewer** still requires independently
 verified Tab5 ESP32-C6/SDIO networking, JPEG encoding, camera frame ownership,
 and a safe app size/recovery plan. The current 1 MiB diagnostic is too
 close to full for adding those features without a separate migration.
+
+## USB camera image test profile (engineering opt-in)
+
+The separate `usb-preview` firmware profile transmits **real color JPEG
+frames** from the Tab5's LCD camera image through the USB Serial/JTAG
+console. This is deliberately distinct from the earlier installed
+`combined` image: the latter emits candidate logs but **no camera pixels**.
+
+- Camera source: real 1280x720-class CSI capture (whatever sensor format is
+  physically negotiated), rotated/display-corrected RGB565, then downsampled
+  to **320x176**, encoded by the P4 hardware JPEG engine, and transmitted on
+  the existing serial COM port (no network radio).
+- On the browser, a checksum-validated low-resolution image appears above
+  the candidate grid. Raw hit coordinates may need selection of the rotation
+  dropdown to match the physical paper target. This is still uncalibrated.
+- Optional firmware mode `CONFIG_LASR_USB_PREVIEW_DIAGNOSTIC=y` has its
+  **own** app-only artifact and safety preflight at
+  `tools/PREPARE_LASR_USB_PREVIEW_TEST.ps1`. It replaces the current
+  combined diagnostic only after exact, complete 16 MiB recovery comparison,
+  SHA-256 check, original 1 MiB app partition size gate, and typed FLASH.
+  The USB-preview build does not run the synthetic SD smoke test.
+- To avoid a stale localhost server, launch this version on a different
+  port, e.g. `tools/OPEN_LASR_USB_TEST.ps1 -Port 8766`, and open
+  `http://127.0.0.1:8766/serial-test.html`.
+
+No standalone Wi-Fi/live phone stream is available yet. Hardware FPS,
+USB throughput, actual JPEG color/orientation, battery operation, and SIRT
+pulse overlay accuracy remain unverified until physically tested.
