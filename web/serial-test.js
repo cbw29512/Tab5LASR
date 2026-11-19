@@ -1,5 +1,6 @@
 import {parseDiagnosticLine, boundedAdd} from "./serial-model.js";
 import {renderCandidates} from "./serial-plot.js";
+import {acceptCameraLine, renderCameraHitOverlay, clearCameraView} from "./serial-preview.js";
 
 // State first: USB serial port owns the stream, with bounded raw lines and
 // candidates. No invented camera feed, shot score, or persistent sessions.
@@ -31,6 +32,7 @@ function draw() {
     view.activity.textContent = state.lastActivity ? `Last serial data ${state.lastActivity}` : "No serial data";
     view.log.textContent = state.lines.length ? state.lines.join("\n") : "No diagnostic lines received.";
     renderCandidates(view.markers, view.empty, state.candidates);
+    renderCameraHitOverlay(state.candidates);
   } catch (error) {
     console.error("LASR USB diagnostic rendering failed", error);
   }
@@ -40,6 +42,7 @@ function acceptLine(input) {
     const line = input.replace(/\x1b\[[0-9;]*m/g, "").trim();
     if (!line) return;
     state.lastActivity = new Date().toLocaleTimeString();
+    if (acceptCameraLine(line)) return;
     const item = parseDiagnosticLine(line);
     if (item?.type === "candidate") state.candidates = boundedAdd(state.candidates, item, 45);
     if (item?.type === "fps") state.fps = item;
@@ -57,8 +60,8 @@ function consume(chunk) {
   try {
     state.buffer += chunk;
     // Prevent malformed/unterminated serial output from growing without bound.
-    if (state.buffer.length > 8192) {
-      state.buffer = state.buffer.slice(-8192);
+    if (state.buffer.length > 150000) {
+      state.buffer = state.buffer.slice(-150000);
       console.warn("LASR serial line exceeded input buffer; dropped old bytes");
     }
     let end;
@@ -133,7 +136,7 @@ view.connect.addEventListener("click", () => { void connect(); });
 view.disconnect.addEventListener("click", () => { void disconnect(); });
 el("clear").addEventListener("click", () => {
   state.lines = []; state.candidates = []; state.fps = null; state.scan = null;
-  state.sd = null; state.lastActivity = null; draw();
+  state.sd = null; state.lastActivity = null; clearCameraView(); draw();
 });
 el("copy").addEventListener("click", async () => {
   try {
