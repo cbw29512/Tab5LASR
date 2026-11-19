@@ -23,8 +23,10 @@ static int s_recalibrate_on_next_frame;
 // Standalone raw-CSI diagnostics retain the existing scanner-on behavior.
 #if CONFIG_LASR_COMBINED_DIAGNOSTIC
 #define LASR_SCAN_DEFAULT 0
+#define LASR_SCAN_STEP 3
 #else
 #define LASR_SCAN_DEFAULT 1
+#define LASR_SCAN_STEP 1
 #endif
 static int s_scanning_enabled = LASR_SCAN_DEFAULT;
 
@@ -68,7 +70,7 @@ bool lasr_csi_probe_begin(uint32_t w, uint32_t h,
     }
     // These are provisional diagnostics only, NOT a calibrated SIRT threshold.
     const lasr_blob_config_t blob={.left=.1f,.top=.1f,.right=.9f,
-        .bottom=.9f,.min_luma=180,.min_delta=90,.step=1,
+        .bottom=.9f,.min_luma=180,.min_delta=90,.step=LASR_SCAN_STEP,
         .min_cluster=3,.radius_px=4,.max_candidates=120};
     if (!lasr_laser_pipeline_init(&pipeline,blob,
         (lasr_pulse_config_t){.on_frames=2,.off_frames=2,.max_gap_us=150000})) {
@@ -82,6 +84,8 @@ bool lasr_csi_probe_begin(uint32_t w, uint32_t h,
         lasr_csi_probe_end();return false;
     }
     source_width=w;source_height=h;stride_bytes=stride;
+    ESP_LOGW(TAG,"Uncalibrated CSI ROI step=%u; dense spot check follows coarse candidates",
+             (unsigned)LASR_SCAN_STEP);
     ESP_LOGW(TAG,"OPT-IN DIAGNOSTIC only: first frame becomes UNVERIFIED dark reference");
     ESP_LOGW(TAG,"NO scoring, NO microSD logging, NO SIRT calibration certified");
     return true;
