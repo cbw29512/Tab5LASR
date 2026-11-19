@@ -48,7 +48,7 @@ try {
         throw 'Connected Tab5 flash read did not complete'
     }
 
-    $matches = @()
+    $verifiedInstalledFolders = @()
     foreach ($candidate in $PreviousArtifactFolders) {
         if (!(Test-Path -LiteralPath $candidate -PathType Container)) {
             Write-Host "SKIPPED absent artifact folder: $candidate" -ForegroundColor Yellow
@@ -77,17 +77,17 @@ try {
         Write-Host "Checking exact installed image: $folder"
         & python $guard $original $live $app
         if ($LASTEXITCODE -eq 0) {
-            $matches += $folder
+            $verifiedInstalledFolders += $folder
             Write-Host "EXACT MATCH: $folder" -ForegroundColor Green
         } else {
             Write-Host "NOT MATCHED: $folder" -ForegroundColor Yellow
         }
     }
-    if ($matches.Count -eq 0) {
+    if ($verifiedInstalledFolders.Count -eq 0) {
         throw 'No known artifact exactly matches the installed firmware. DO NOT FLASH.'
     }
     Write-Host 'EXACT INSTALLED REFERENCE(S), READ ONLY:' -ForegroundColor Green
-    $matches | ForEach-Object { Write-Host $_ -ForegroundColor Green }
+    $verifiedInstalledFolders | ForEach-Object { Write-Host $_ -ForegroundColor Green }
     Write-Host 'No flash writes performed. Use only an exact match in the original guarded preflight.' -ForegroundColor Green
 }
 catch {
