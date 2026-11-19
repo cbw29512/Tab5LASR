@@ -33,12 +33,18 @@ try {
         throw "Expected one nonexpired combined artifact, found $($matches.Count)"
     }
     $folder = Join-Path $HOME ("Downloads\Tab5LASR_COMBINED_" + $RunId)
-    if (Test-Path -LiteralPath $folder) {
-        throw "Candidate already downloaded; inspect rather than overwrite: $folder"
+    if (Test-Path -LiteralPath $folder -PathType Container) {
+        # The user can safely retry; the preflight below rechecks the
+        # candidate SHA-256, mode and partition instead of blindly trusting it.
+        Write-Host "Reusing existing candidate folder: $folder" -ForegroundColor Cyan
+    } else {
+        if (Test-Path -LiteralPath $folder) {
+            throw 'Candidate destination exists but is not a directory'
+        }
+        New-Item -ItemType Directory -Path $folder -ErrorAction Stop | Out-Null
+        & gh run download $RunId --repo $repo --name $matches[0].name --dir $folder
+        if ($LASTEXITCODE -ne 0) { throw 'Exact combined artifact download failed' }
     }
-    New-Item -ItemType Directory -Path $folder -ErrorAction Stop | Out-Null
-    & gh run download $RunId --repo $repo --name $matches[0].name --dir $folder
-    if ($LASTEXITCODE -ne 0) { throw 'Exact combined artifact download failed' }
     $preflight = Join-Path $PSScriptRoot 'PREFLIGHT_LASR_DIAGNOSTIC.ps1'
     if (!(Test-Path -LiteralPath $preflight -PathType Leaf)) {
         throw 'Verified recovery preflight script missing'
