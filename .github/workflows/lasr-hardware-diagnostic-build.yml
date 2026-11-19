@@ -120,7 +120,7 @@ jobs:
           # PowerShell's case-insensitive automatic $Matches is a Hashtable.
           # Reusing that name as an array crashed after a successful exact match.
           $identifier = Get-Content -LiteralPath 'tools/IDENTIFY_LASR_INSTALLED.ps1' -Raw
-          if ([regex]::IsMatch($identifier, '(?i)\\$matches\\b')) {
+          if ([regex]::IsMatch($identifier, '(?i)\$matches\b')) {
             throw 'Identifier must not overwrite PowerShell automatic Matches variable'
           }
           Write-Host 'No device connected or flashed.'
