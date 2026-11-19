@@ -23,6 +23,7 @@ static char *s_wire;
 static size_t s_input_cap,s_jpg_cap;
 static volatile int s_frame_state; // 0 idle, 1 copying, 2 ready, 3 sending
 static uint32_t s_seq,s_offer_count;
+static bool s_active;
 
 static void usb_frame_worker(void *unused) {
     (void)unused;
@@ -74,26 +75,34 @@ bool lasr_usb_preview_start(void) {
     if (!s_input || !s_jpg || !s_wire ||
         s_input_cap<INPUT_BYTES || s_jpg_cap<JPG_MAX) {
         ESP_LOGE(TAG,"Insufficient aligned buffers for USB camera JPEG");
+        free(s_input);free(s_jpg);free(s_wire);
+        s_input=NULL;s_jpg=NULL;s_wire=NULL;
         return false;
     }
     const jpeg_encode_engine_cfg_t engine_cfg={.intr_priority=0,.timeout_ms=100};
     esp_err_t err=jpeg_new_encoder_engine(&engine_cfg,&s_encoder);
     if (err!=ESP_OK) {
         ESP_LOGE(TAG,"JPEG hardware unavailable: %s",esp_err_to_name(err));
+        free(s_input);free(s_jpg);free(s_wire);
+        s_input=NULL;s_jpg=NULL;s_wire=NULL;
         return false;
     }
     if (xTaskCreate(usb_frame_worker,"lasr_usb_video",12*1024,NULL,
                     tskIDLE_PRIORITY+1,NULL)!=pdPASS) {
         ESP_LOGE(TAG,"USB camera worker task allocation failed");
         jpeg_del_encoder_engine(s_encoder);s_encoder=NULL;
+        free(s_input);free(s_jpg);free(s_wire);
+        s_input=NULL;s_jpg=NULL;s_wire=NULL;
         return false;
     }
+    s_active=true;
     ESP_LOGW(TAG,"USB CAMERA LIVE PREVIEW: 320x176 JPEG from real CSI LCD pixels");
     return true;
 }
 
 void lasr_usb_preview_offer(const uint16_t *src,uint32_t sw,uint32_t sh) {
-    if (!src || !sw || !sh || (++s_offer_count%3u)!=0) return;
+    if (!s_active || !s_input || !s_encoder || !src || !sw || !sh ||
+        (++s_offer_count%3u)!=0) return;
     int expected=0;
     if (!__atomic_compare_exchange_n(&s_frame_state,&expected,1,false,
                                      __ATOMIC_ACQ_REL,__ATOMIC_ACQUIRE)) return;
