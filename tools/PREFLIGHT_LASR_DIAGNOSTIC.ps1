@@ -4,7 +4,7 @@ param(
     [ValidatePattern('^COM[0-9]+$')][string]$Port = 'COM5',
     [Parameter(Mandatory=$true)][string]$CandidateFolder,
     [Parameter(Mandatory=$true)][string]$CameraBackupFolder,
-    [ValidateSet('sd-smoke','raw-csi')][string]$Mode = 'sd-smoke',
+    [ValidateSet('sd-smoke','raw-csi','combined')][string]$Mode = 'sd-smoke',
     # Optional: ONLY the previously flashed, CI-verified SD diagnostic image.
     # Required when the Tab5 is no longer running the camera backup.
     [string]$InstalledDiagnosticFolder = '',
