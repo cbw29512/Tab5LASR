@@ -32,6 +32,8 @@ jobs:
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
             combined)
               # Separate review-only binary. Never enable on normal camera boot.
+              # Remove the base default before selecting the smaller font.
+              sed -i '/^CONFIG_LV_FONT_MONTSERRAT_20=y$/d' onboard/sdkconfig.defaults
               printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_COMBINED_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\nCONFIG_LV_FONT_MONTSERRAT_20=n\nCONFIG_LV_FONT_MONTSERRAT_14=y\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
             *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
           esac
