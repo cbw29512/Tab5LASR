@@ -47,7 +47,8 @@ export function parseDiagnosticLine(input) {
 export function boundedAdd(existing, value, limit = 80) {
   try {
     if (!Array.isArray(existing) || !Number.isInteger(limit) || limit < 1) return [];
-    return [...existing.slice(-(limit - 1)), value];
+    const retained = limit === 1 ? [] : existing.slice(-(limit - 1));
+    return [...retained, value];
   } catch (error) {
     console.warn("LASR diagnostic history rejected", error);
     return [];
