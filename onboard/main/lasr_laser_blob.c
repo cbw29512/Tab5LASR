@@ -18,9 +18,12 @@ static bool candidate(const lasr_raw_frame_t *now,
     // and bounded this ROI before entering the scan loops. Avoid
     // revalidating complete V4L2 frame metadata for every single pixel.
     const uint8_t a = lasr_raw_luma_validated(now, x, y);
-    const uint8_t b = lasr_raw_luma_validated(dark, x, y);
-    *delta = a > b ? (uint8_t)(a - b) : 0;
-    return a >= c->min_luma && *delta >= c->min_delta;
+    // Most pixels cannot qualify: avoid reading / decoding a second
+    // PSRAM frame unless the current pixel exceeds the bright threshold.
+    if (a < c->min_luma) return false;
+    const uint8_t background = lasr_raw_luma_validated(dark, x, y);
+    *delta = a > background ? (uint8_t)(a - background) : 0;
+    return *delta >= c->min_delta;
 }
 bool lasr_blob_scan(const lasr_raw_frame_t *now,
                     const lasr_raw_frame_t *dark,
@@ -48,13 +51,20 @@ bool lasr_blob_scan(const lasr_raw_frame_t *now,
     // A candidate must be a compact spot, not scattered bright changes.
     uint64_t sx=0,sy=0; uint32_t clustered=0;
     const uint64_t radius2=(uint64_t)cfg->radius_px*cfg->radius_px;
-    for (uint32_t y=y0;y<y1;y+=cfg->step) {
-        for (uint32_t x=x0;x<x1;x+=cfg->step) {
+    // The peak is on the original sample grid. Visit ONLY grid samples
+    // within its radius; never rescan the entire sensor to measure a spot.
+    const int32_t extent=(int32_t)(cfg->radius_px/cfg->step);
+    for (int32_t iy=-extent;iy<=extent;++iy) {
+        const int32_t y=(int32_t)peak_y+iy*cfg->step;
+        if (y<(int32_t)y0 || y>=(int32_t)y1) continue;
+        for (int32_t ix=-extent;ix<=extent;++ix) {
+            const int32_t x=(int32_t)peak_x+ix*cfg->step;
+            if (x<(int32_t)x0 || x>=(int32_t)x1) continue;
             const int64_t dx=(int64_t)x-peak_x,dy=(int64_t)y-peak_y;
             if ((uint64_t)(dx*dx+dy*dy)>radius2) continue;
             uint8_t delta=0;
-            if (candidate(now,dark,cfg,x,y,&delta)) {
-                sx+=x;sy+=y;++clustered;
+            if (candidate(now,dark,cfg,(uint32_t)x,(uint32_t)y,&delta)) {
+                sx+=(uint32_t)x;sy+=(uint32_t)y;++clustered;
             }
         }
     }
