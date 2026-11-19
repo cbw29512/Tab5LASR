@@ -161,3 +161,17 @@ jobs:
           Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
           # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
           $global:LASTEXITCODE = 0
+
+  usb-preview-wire-host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify USB camera frame checksum and bounded ASCII format
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -O2 \
+            onboard/main/lasr_usb_preview_wire.c \
+            onboard/tests/test_lasr_usb_preview_wire.c \
+            -o /tmp/lasr_usb_wire
+          /tmp/lasr_usb_wire
