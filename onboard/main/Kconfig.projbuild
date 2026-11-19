@@ -1,0 +1,19 @@
+menu "Tab5 LASR experimental diagnostics"
+    config LASR_CSI_DIAGNOSTIC
+        bool "Read-only raw CSI laser candidate probe (UNVERIFIED)"
+        default n
+        help
+            Off by default to preserve proven camera, color, and battery behavior.
+            If explicitly enabled for an engineering build, captures the first
+            frame as a reference and logs candidate flashes without creating
+            shots, scores, or microSD writes. Requires physical SIRT and dark
+            target calibration before any results may be trusted.
+    config LASR_SD_SMOKE_ON_BOOT
+        bool "One-time microSD write/readback test at boot (UNTESTED hardware)"
+        default n
+        help
+            Explicit engineering opt-in only. After normal display and
+            battery safety setup, mount SD without formatting, create one
+            unique diagnostic file, verify contents, and unmount. Never run
+            automatically on normal user firmware builds.
+endmenu

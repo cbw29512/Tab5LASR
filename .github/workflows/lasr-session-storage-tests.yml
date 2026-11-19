@@ -1,0 +1,110 @@
+name: LASR microSD session storage core
+on:
+  push:
+    paths:
+      - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_recorder_*'
+      - 'onboard/main/lasr_laser_pulse.*'
+      - 'onboard/main/lasr_raw_pixel.*'
+      - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_shot_clock.*'
+      - 'onboard/main/lasr_sd_smoke*'
+      - 'onboard/main/lasr_sd_session_verify.*'
+      - 'onboard/main/lasr_laser_pipeline.*'
+      - 'onboard/main/lasr_csi_*'
+      - 'onboard/main/lasr_transfer_guard.*'
+      - 'onboard/tests/test_lasr_*'
+      - '.github/workflows/lasr-session-storage-tests.yml'
+  pull_request:
+    paths:
+      - 'onboard/main/lasr_session_*'
+      - 'onboard/main/lasr_recorder_*'
+      - 'onboard/main/lasr_laser_pulse.*'
+      - 'onboard/main/lasr_raw_pixel.*'
+      - 'onboard/main/lasr_laser_blob.*'
+      - 'onboard/main/lasr_shot_clock.*'
+      - 'onboard/main/lasr_sd_smoke*'
+      - 'onboard/main/lasr_sd_session_verify.*'
+      - 'onboard/main/lasr_laser_pipeline.*'
+      - 'onboard/main/lasr_csi_*'
+      - 'onboard/main/lasr_transfer_guard.*'
+      - 'onboard/tests/test_lasr_*'
+      - '.github/workflows/lasr-session-storage-tests.yml'
+  workflow_dispatch:
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Portable storage and recorder state tests
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/tests/test_lasr_session_store.c -lm -o /tmp/lasr_store
+          /tmp/lasr_store
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/main/lasr_recorder_core.c \
+            onboard/tests/test_lasr_recorder_core.c -lm -o /tmp/lasr_core
+          /tmp/lasr_core
+      - name: USB exclusive media arbitration tests
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -g -fsanitize=undefined \
+            -Ionboard/main onboard/main/lasr_transfer_guard.c \
+            onboard/tests/test_lasr_transfer_guard.c -o /tmp/lasr_guard
+          /tmp/lasr_guard
+      - name: Camera laser pulse state tests (synthetic, no hardware claims)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -Wall -Wextra -Werror -g -fsanitize=undefined \
+            -Ionboard/main onboard/main/lasr_laser_pulse.c \
+            onboard/tests/test_lasr_laser_pulse.c -lm -o /tmp/lasr_pulse
+          /tmp/lasr_pulse
+      - name: Raw CSI format, brightness and pulse tests (synthetic only)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_raw_pixel.c onboard/main/lasr_laser_blob.c \
+            onboard/main/lasr_laser_pipeline.c onboard/main/lasr_laser_pulse.c \
+            onboard/main/lasr_csi_format.c \
+            onboard/tests/test_lasr_laser_blob.c -lm -o /tmp/lasr_blob
+          /tmp/lasr_blob
+      - name: Device shot clock GO and split tests (synthetic only)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_shot_clock.c \
+            onboard/tests/test_lasr_shot_clock.c -lm -o /tmp/lasr_clock
+          /tmp/lasr_clock
+      - name: No-format SD file smoke host tests (not a physical card test)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_sd_smoke_io.c \
+            onboard/tests/test_lasr_sd_smoke_io.c -o /tmp/lasr_sd_probe
+          /tmp/lasr_sd_probe
+      - name: Synthetic session-format probe (not a real laser shot)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/main/lasr_sd_session_probe.c \
+            onboard/tests/test_lasr_sd_session_probe.c -lm -o /tmp/lasr_session_probe
+          /tmp/lasr_session_probe
+      - name: Verify diagnostic session after card remount (host simulation)
+        run: |
+          set -euo pipefail
+          gcc -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -g \
+            -fsanitize=undefined -Ionboard/main \
+            onboard/main/lasr_session_fs.c onboard/main/lasr_session_store.c \
+            onboard/main/lasr_sd_session_probe.c onboard/main/lasr_sd_session_verify.c \
+            onboard/tests/test_lasr_sd_session_verify.c -lm -o /tmp/lasr_sd_durable
+          /tmp/lasr_sd_durable
