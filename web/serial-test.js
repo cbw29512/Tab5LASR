@@ -1,4 +1,5 @@
 import {parseDiagnosticLine, boundedAdd} from "./serial-model.js";
+import {renderCandidates} from "./serial-plot.js";
 
 // State first: USB serial port owns the stream, with bounded raw lines and
 // candidates. No invented camera feed, shot score, or persistent sessions.
@@ -31,16 +32,7 @@ function draw() {
     view.shots.textContent = `${state.candidates.length} candidate events (recent)`;
     view.activity.textContent = state.lastActivity ? `Last serial data ${state.lastActivity}` : "No serial data";
     view.log.textContent = state.lines.length ? state.lines.join("\n") : "No diagnostic lines received.";
-    view.markers.replaceChildren();
-    state.candidates.forEach((hit, index) => {
-      const dot = document.createElement("span");
-      dot.className = index === state.candidates.length - 1 ? "hit latest" : "hit";
-      dot.style.left = `${hit.x_norm * 100}%`;
-      dot.style.top = `${hit.y_norm * 100}%`;
-      dot.title = `UNVERIFIED candidate ${index + 1}: x=${hit.x_norm.toFixed(4)}, y=${hit.y_norm.toFixed(4)}`;
-      view.markers.append(dot);
-    });
-    view.empty.hidden = state.candidates.length > 0;
+    renderCandidates(view.markers, view.empty, state.candidates);
   } catch (error) {
     console.error("LASR USB diagnostic rendering failed", error);
   }
