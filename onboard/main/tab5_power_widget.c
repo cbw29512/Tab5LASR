@@ -2,6 +2,7 @@
 #include "tab5_power_diag.h"
 #include "tab5_power_recovery.h"
 #include "tab5_power.h"
+#include "sdkconfig.h"
 #include "esp_timer.h"
 #include "esp_log.h"
 #include <stdio.h>
@@ -126,7 +127,13 @@ void tab5_power_widget_attach(lv_obj_t *screen) {
         ESP_LOGE(TAG, "Could not allocate battery diagnostic label");
         return;
     }
+#if CONFIG_LASR_COMBINED_DIAGNOSTIC
+    // Engineering-only image reuses LVGL's built-in smaller font to
+    // preserve the hard 1 MiB partition without affecting normal firmware.
+    lv_obj_set_style_text_font(g_label, &lv_font_montserrat_14, 0);
+#else
     lv_obj_set_style_text_font(g_label, &lv_font_montserrat_20, 0);
+#endif
     g_button = lv_button_create(screen);
     if (!g_button) {
         ESP_LOGE(TAG, "Could not allocate manual battery recovery button");
