@@ -14,11 +14,13 @@ static bool candidate(const lasr_raw_frame_t *now,
                       const lasr_raw_frame_t *dark,
                       const lasr_blob_config_t *c,
                       uint32_t x, uint32_t y, uint8_t *delta) {
-    uint8_t a=0,b=0;
-    if (!lasr_raw_luma(now,x,y,&a) || !lasr_raw_luma(dark,x,y,&b))
-        return false;
-    *delta=a>b?(uint8_t)(a-b):0;
-    return a>=c->min_luma && *delta>=c->min_delta;
+    // lasr_blob_scan validated BOTH frames, including stride and length,
+    // and bounded this ROI before entering the scan loops. Avoid
+    // revalidating complete V4L2 frame metadata for every single pixel.
+    const uint8_t a = lasr_raw_luma_validated(now, x, y);
+    const uint8_t b = lasr_raw_luma_validated(dark, x, y);
+    *delta = a > b ? (uint8_t)(a - b) : 0;
+    return a >= c->min_luma && *delta >= c->min_delta;
 }
 bool lasr_blob_scan(const lasr_raw_frame_t *now,
                     const lasr_raw_frame_t *dark,
