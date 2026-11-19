@@ -11,7 +11,8 @@ int main(void) {
     const size_t n=lasr_usb_frame_format(jpeg,sizeof(jpeg),8,320,176,
                                           line,sizeof(line));
     assert(n>40 && line[n-1]=='\n' && line[n]=='\0');
-    assert(strncmp(line,"LASRJPEGV1 8 320 176 5 ",24)==0);
+    const char *prefix="LASRJPEGV1 8 320 176 5 ";
+    assert(strncmp(line,prefix,strlen(prefix))==0);
     assert(strstr(line,"/9gA/9k=")!=NULL);
     assert(lasr_usb_frame_format(jpeg,sizeof(jpeg),8,320,176,line,10)==0);
     assert(lasr_usb_frame_format(jpeg,sizeof(jpeg),8,320,176,NULL,0)==0);
