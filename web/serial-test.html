@@ -13,7 +13,7 @@
     <div>
       <span class="eyebrow">TAB5 LASR · ENGINEERING DIAGNOSTIC</span>
       <h1>Laser detection test</h1>
-      <p>Read real, unverified SIRT candidate events from the Tab5 over USB. No camera video, calibration, scoring, or recording.</p>
+      <p>View real Tab5 USB camera JPEG frames and unverified SIRT candidate locations. Camera images require the separate USB-preview firmware; no calibrated scoring or session recording.</p>
     </div>
     <div id="connection" class="connection" role="status" aria-live="polite">Disconnected</div>
   </header>
@@ -24,8 +24,8 @@
     <button id="copy" type="button" class="secondary">Copy log</button>
   </section>
   <div class="notice">
-    <strong>To test:</strong> Connect the Tab5 by USB, turn <strong>LASER SCAN ON</strong> on the Tab5 screen,
-    aim its built-in camera at a laser-free target for the initial reference, then fire your unloaded SIRT trainer.
+    <strong>To test:</strong> Connect the Tab5 by USB. The USB-preview diagnostic scans automatically; for the older combined diagnostic, turn <strong>LASER SCAN ON</strong> on the Tab5 screen.
+    Aim its built-in camera at a laser-free target before capture, then fire your unloaded SIRT trainer.
     Close any other serial monitor before connecting. Use desktop Chrome or Edge.
   </div>
   <section class="panel live-camera-panel" aria-label="Real Tab5 CSI camera image">
