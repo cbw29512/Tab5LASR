@@ -11,6 +11,7 @@ idf_component_register(
     "lasr_raw_pixel.c" "lasr_laser_blob.c" "lasr_laser_pipeline.c"
     "lasr_csi_format.c" "lasr_csi_probe.c" "lasr_shot_clock.c"
     "lasr_sd_smoke_io.c" "lasr_sd_smoke.c" "lasr_sd_session_verify.c" "lasr_sd_session_probe.c" "lasr_sd_status_ui.c"
+    "lasr_concurrent_sd.c"
   INCLUDE_DIRS "."
   REQUIRES esp_driver_ppa fatfs sdmmc
 )
