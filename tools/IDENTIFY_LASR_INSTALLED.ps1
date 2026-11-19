@@ -68,7 +68,7 @@ try {
         $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $app).Hash.ToUpperInvariant()
         $policy = Get-Content -LiteralPath $policyFile -Raw
         if ($expected.Length -ne 64 -or $actual -cne $expected -or
-            $policy -notmatch '(?m)^MODE=(sd-smoke|combined)\r?$' -or
+            $policy -notmatch '(?m)^MODE=(sd-smoke|combined|usb-preview)\r?$' -or
             $policy -notmatch '(?m)^APP_OFFSET=0x10000\r?$' -or
             $policy -notmatch '(?m)^MAX_PARTITION=1048576\r?$' -or
             $policy -notmatch '(?m)^FLASH=NO_AUTO_FLASH\r?$') {
