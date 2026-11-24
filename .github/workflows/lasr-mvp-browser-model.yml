@@ -1,0 +1,34 @@
+name: LASR template and shot timer MVP
+on:
+  push:
+    paths:
+      - 'web/shot-timer-mvp/**'
+      - '.github/workflows/lasr-mvp-browser-model.yml'
+  pull_request:
+    paths:
+      - 'web/shot-timer-mvp/**'
+      - '.github/workflows/lasr-mvp-browser-model.yml'
+jobs:
+  browser-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check JavaScript syntax
+        run: |
+          for file in web/shot-timer-mvp/*.js; do node --check "$file"; done
+      - name: Run offline model and timing tests
+        run: node --test web/shot-timer-mvp/tests/*.test.mjs
+      - name: Reject oversized source files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          base = Path('web/shot-timer-mvp')
+          oversized = [(str(p), len(p.read_text().splitlines())) for p in base.iterdir()
+                       if p.suffix in {'.js', '.css', '.html'} and len(p.read_text().splitlines()) > 150]
+          if oversized:
+              raise SystemExit(f'Split files exceeding 150 lines: {oversized}')
+          print('Source file line limit satisfied')
+          PY
