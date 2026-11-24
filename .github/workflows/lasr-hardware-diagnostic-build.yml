@@ -1,0 +1,124 @@
+name: LASR opted-in hardware diagnostics (review only)
+on:
+  pull_request:
+    paths:
+      - 'onboard/**'
+      - '.github/workflows/lasr-hardware-diagnostic-build.yml'
+      - 'tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1'
+      - 'tools/PREPARE_LASR_SD_TEST.ps1'
+      - 'tools/VERIFY_LASR_SD_RESULTS.ps1'
+      - 'tools/verify_installed_sd_upgrade.py'
+      - 'tools/tests/test_verify_installed_sd_upgrade.py'
+  workflow_dispatch:
+
+jobs:
+  esp32p4-diagnostic-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [sd-smoke, raw-csi]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Opt in to exactly one read-only / controlled diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "${{ matrix.mode }}" in
+            sd-smoke)
+              printf '\nCONFIG_LASR_SD_SMOKE_ON_BOOT=y\nCONFIG_LASR_CSI_DIAGNOSTIC=n\nCONFIG_FATFS_LFN_HEAP=y\nCONFIG_FATFS_MAX_LFN=255\n' >> onboard/sdkconfig.defaults ;;
+            raw-csi)
+              printf '\nCONFIG_LASR_CSI_DIAGNOSTIC=y\nCONFIG_LASR_SD_SMOKE_ON_BOOT=n\n' >> onboard/sdkconfig.defaults ;;
+            *) echo 'Unknown diagnostic profile' >&2; exit 1 ;;
+          esac
+      - name: Compile opt-in ESP32-P4 firmware with pinned project config
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: release-v6.1
+          target: esp32p4
+          path: onboard
+      - name: Enforce original chip revision and installed 1 MiB app partition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install esptool==5.6.0
+          # Keep FAT filenames and stack settings accountable in the built image.
+          if [ "${{ matrix.mode }}" = "sd-smoke" ]; then
+            grep -Eq '^#define CONFIG_FATFS_LFN_HEAP 1$' onboard/build/config/sdkconfig.h
+            grep -Eq '^#define CONFIG_FATFS_MAX_LFN 255$' onboard/build/config/sdkconfig.h
+          fi
+          test -f onboard/build/tab5lasr_onboard.bin
+          python -m esptool --chip esp32p4 image-info onboard/build/tab5lasr_onboard.bin > /tmp/image-info.txt
+          grep -Fq 'Minimal chip revision: v1.0' /tmp/image-info.txt
+          grep -Fq 'Maximal chip revision: v1.99' /tmp/image-info.txt
+          SIZE=$(stat -c%s onboard/build/tab5lasr_onboard.bin)
+          echo "DIAGNOSTIC_PROFILE=${{ matrix.mode }} IMAGE_BYTES=$SIZE MAX=1048576"
+          test "$SIZE" -le 1048576 || { echo 'STOP: image over factory 1 MiB app partition'; exit 1; }
+      - name: Package REVIEW ONLY image and safety notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostic-review
+          cp onboard/build/tab5lasr_onboard.bin diagnostic-review/
+          cd diagnostic-review
+          sha256sum tab5lasr_onboard.bin > SHA256SUMS.txt
+          printf 'MODE=%s\nFLASH=NO_AUTO_FLASH\nAPP_OFFSET=0x10000\nMAX_PARTITION=1048576\nPHYSICAL_HARDWARE_TEST=NOT_DONE\n' "${{ matrix.mode }}" > FLASH_POLICY.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lasr-optin-${{ matrix.mode }}-${{ github.sha }}
+          path: diagnostic-review/
+          retention-days: 14
+          if-no-files-found: error
+
+  windows-powershell-51-preflight-parser:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject unexpected flash regions in synthetic diagnostic-upgrade tests
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/tests -p test_verify_installed_sd_upgrade.py -v
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only upgrade guard regression' }
+      - name: Verify diagnostic script parses under Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($path in @('tools/PREFLIGHT_LASR_DIAGNOSTIC.ps1',
+                              'tools/PREPARE_LASR_SD_TEST.ps1',
+                              'tools/VERIFY_LASR_SD_RESULTS.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | Format-Table -AutoSize
+              throw "PowerShell 5.1 parser rejected $path"
+            }
+            Write-Host "PASS: PowerShell 5.1 syntax $path"
+          }
+          Write-Host 'No device connected or flashed.'
+      - name: Read-only SD verifier accepts fixture and rejects tampering
+        shell: powershell
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'lasr-sd-card'
+          $path = Join-Path $root 'LASR\diagnostics\synthetic-session-A1\LASR\sessions\fake_shots'
+          New-Item -ItemType Directory -Force -Path $path | Out-Null
+          $rows = @('shot,elapsed_ms,split_ms,zone,score,x_norm,y_norm',
+                    '1,150,150,UNSCORED,0,0.250000,0.500000',
+                    '2,410,260,UNSCORED,0,0.750000,0.400000')
+          $csv = ($rows -join [char]10) + [char]10
+          $session = '{"schema_version":1,"session_id":"fake_shots","target_id":"synthetic_test","status":"complete","shot_count":2,"score_total":0,"elapsed_ms":410,"start_delay_ms":3000,"save_state":"saved"}'
+          $target = '{"schema_version":1,"target_id":"synthetic_test","calibration_revision":1}'
+          [IO.File]::WriteAllText((Join-Path $path 'shots.csv'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'shots.pending'), $csv)
+          [IO.File]::WriteAllText((Join-Path $path 'session.json'), $session + [char]10)
+          [IO.File]::WriteAllText((Join-Path $path 'target.json'), $target + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -ne 0) { throw 'Valid synthetic SD fixture was rejected' }
+          [IO.File]::AppendAllText((Join-Path $path 'shots.csv'), 'TAMPER' + [char]10)
+          & powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File tools/VERIFY_LASR_SD_RESULTS.ps1 -CardRoot $root
+          if ($LASTEXITCODE -eq 0) { throw 'Tampered SD fixture was incorrectly accepted' }
+          Write-Host 'SD verifier accepted valid fixture and rejected corrupted CSV'
+          # The negative test intentionally left LASTEXITCODE=1. Clear it for CI.
+          $global:LASTEXITCODE = 0

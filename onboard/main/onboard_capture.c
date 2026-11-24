@@ -3,6 +3,10 @@
 #include "onboard_stats.h"
 #include "onboard_view.h"
 #include "onboard_capture_buffers.h"
+#include "sdkconfig.h"
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+#include "lasr_csi_probe.h"
+#endif
 #include "bsp/esp-bsp.h"
 #include "esp_video_device.h"
 #include "esp_log.h"
@@ -14,6 +18,9 @@
 
 static const char *TAG = "lasr_csi";
 onboard_camera_status_t g_onboard_status = {.state = ONBOARD_BOOT};
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+static bool s_csi_probe_started;
+#endif
 
 
 static bool capture_frames(int fd, capture_buf_t *buffers) {
@@ -26,6 +33,9 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
     int64_t sampled = began;
     uint32_t prev_rx = 0, prev_draw = 0;
     g_onboard_status.state = ONBOARD_STREAMING;
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+    bool warned_probe=false;
+#endif
     for (;;) {
         struct v4l2_buffer frame = {
             .type = V4L2_BUF_TYPE_VIDEO_CAPTURE,
@@ -41,6 +51,16 @@ static bool capture_frames(int fd, capture_buf_t *buffers) {
         }
         g_onboard_status.captured_frames++;
         g_onboard_status.last_frame_monotonic_us = esp_timer_get_time();
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+        // Observe raw V4L2-owned bytes BEFORE QBUF, not Color 2/4 LCD pixels.
+        if (s_csi_probe_started &&
+            !lasr_csi_probe_observe(buffers[frame.index].data, frame.bytesused,
+                                    (uint64_t)g_onboard_status.last_frame_monotonic_us) &&
+            !warned_probe) {
+            ESP_LOGW(TAG, "Uncalibrated CSI diagnostics failed; video remains active");
+            warned_probe=true;
+        }
+#endif
         if (onboard_view_show(buffers[frame.index].data, buffers[frame.index].size,
                               (uint8_t)frame.index)) {
             g_onboard_status.displayed_frames++;
@@ -102,7 +122,19 @@ bool onboard_camera_run(void) {
                                g_onboard_status.height,
                                g_onboard_status.pixel_format);
     if (ok) ok = onboard_init_buffers(fd, buffers);
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+    if (ok) {
+        s_csi_probe_started=lasr_csi_probe_begin(fmt.fmt.pix.width,
+                 fmt.fmt.pix.height,fmt.fmt.pix.pixelformat,
+                 fmt.fmt.pix.bytesperline);
+        if (!s_csi_probe_started)
+            ESP_LOGW(TAG, "Read-only CSI diagnostics disabled; camera remains usable");
+    }
+#endif
     if (ok) ok = capture_frames(fd, buffers);
+#if CONFIG_LASR_CSI_DIAGNOSTIC
+    lasr_csi_probe_end();s_csi_probe_started=false;
+#endif
     onboard_release_buffers(buffers);
     if (close(fd) != 0) ESP_LOGW(TAG, "Camera close failed");
     g_onboard_status.state = ONBOARD_ERROR;
